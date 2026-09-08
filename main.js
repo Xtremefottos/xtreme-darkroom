@@ -240,6 +240,129 @@
     return false;
   }
 
+  async function saveSel(name) {
+    await bp([{
+      _obj: "duplicate",
+      _target: [{ _ref: "channel", _property: "selection" }],
+      name: name
+    }]);
+  }
+
+  async function loadSel(name, modifier) {
+    var cmd = {
+      _obj: "set",
+      _target: [{ _ref: "channel", _property: "selection" }],
+      to: { _ref: "channel", _name: name }
+    };
+    if (modifier) cmd.selectionModifier = { _enum: "selectionModifierType", _value: modifier };
+    await bp([cmd]);
+  }
+
+  async function deleteChannel(name) {
+    try {
+      await bp([{ _obj: "delete", _target: [{ _ref: "channel", _name: name }] }]);
+    } catch (e) {}
+  }
+
+  async function subtractPeople(tags) {
+    if (!(await hasSelection())) return;
+    try { await saveSel("XT · keep"); } catch (e) { return; }
+    var ok = false;
+    try { ok = await selectPeopleAI(tags); } catch (e) {}
+    if (ok) {
+      try { await saveSel("XT · cut"); } catch (e) { ok = false; }
+      try {
+        await loadSel("XT · keep");
+        if (ok) await loadSel("XT · cut", "subtractFromSelection");
+      } catch (e) {
+        try { await loadSel("XT · keep"); } catch (e2) {}
+      }
+      try { await deleteChannel("XT · cut"); } catch (e) {}
+    } else {
+      try { await loadSel("XT · keep"); } catch (e) {}
+    }
+    try { await deleteChannel("XT · keep"); } catch (e) {}
+  }
+
+  async function intersectSubject() {
+    if (!(await hasSelection())) return;
+    try { await saveSel("XT · keep"); } catch (e) { return; }
+    var ok = false;
+    try {
+      await selectSubject();
+      ok = await hasSelection();
+    } catch (e) {}
+    if (!ok) {
+      try { ok = await selectPeopleAI(null); } catch (e) {}
+    }
+    if (ok) {
+      try { await saveSel("XT · subj"); } catch (e) { ok = false; }
+      try {
+        await loadSel("XT · keep");
+        if (ok) await loadSel("XT · subj", "suppressSelection");
+      } catch (e) {
+        try { await loadSel("XT · keep"); } catch (e2) {}
+      }
+      try { await deleteChannel("XT · subj"); } catch (e) {}
+    } else {
+      try { await loadSel("XT · keep"); } catch (e) {}
+    }
+    try { await deleteChannel("XT · keep"); } catch (e) {}
+  }
+
+  async function refineSel(kind) {
+    var contract = 0;
+    var expand = 0;
+    var feather = 2.5;
+    var smooth = 3;
+    var shift = 0;
+    var radius = 0.8;
+    if (kind === "skin") { contract = 2; feather = 2.2; smooth = 4; shift = -10; radius = 0.6; }
+    else if (kind === "hair") { expand = 2; feather = 5; smooth = 1; radius = 2.5; shift = 8; }
+    else if (kind === "eyes" || kind === "lips" || kind === "teeth") { contract = 1; feather = 1.1; smooth = 2; radius = 0.4; }
+    else if (kind === "subject") { feather = 2; smooth = 3; }
+    else if (kind === "background") { expand = 4; feather = 3.5; smooth = 2; }
+    if (contract) {
+      try { await bp([{ _obj: "contract", by: { _unit: "pixelsUnit", _value: contract } }]); } catch (e) {}
+    }
+    if (expand) {
+      try { await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: expand } }]); } catch (e) {}
+    }
+    try {
+      await bp([{
+        _obj: "refineSelectionEdge",
+        borderRadius: { _unit: "pixelsUnit", _value: radius },
+        smooth: smooth,
+        feather: { _unit: "pixelsUnit", _value: feather },
+        contrast: kind === "hair" ? 8 : 22,
+        shiftEdge: shift,
+        purify: false
+      }]);
+    } catch (e) {
+      try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: feather } }]); } catch (e2) {}
+    }
+  }
+
+  async function blendIfMids() {
+    try {
+      await bp([{
+        _obj: "set",
+        _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+        to: {
+          _obj: "layer",
+          blendRange: [{
+            _obj: "blendRange",
+            channel: { _ref: "channel", _enum: "channel", _value: "gray" },
+            srcBlackMin: 0,
+            srcBlackMax: 18,
+            srcWhiteMin: 238,
+            srcWhiteMax: 255
+          }]
+        }
+      }]);
+    } catch (e) {}
+  }
+
   var PEOPLE_TAGS = {
     skin: ["Facial skin", "Upper body skin", "Face Skin", "Skin"],
     eyes: ["Eyes", "Iris", "Eye"],
@@ -255,7 +378,6 @@
     if (kind === "background") {
       if (await selectAI("subject")) {
         await invertSel();
-        try { await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
         return true;
       }
       return false;
@@ -266,18 +388,29 @@
       return await hasSelection();
     }
     var tags = PEOPLE_TAGS[kind];
-    if (tags && await selectPeopleAI(tags)) return true;
-    if (kind === "skin") {
+    var ok = !!(tags && await selectPeopleAI(tags));
+    if (!ok && kind === "skin") {
       try {
         await bp([{
           _obj: "colorRange",
           colors: { _enum: "colors", _value: "skinTones" },
-          fuzziness: 80
+          fuzziness: 72
         }]);
-        if (await hasSelection()) return true;
+        ok = await hasSelection();
       } catch (e) {}
     }
-    await selectSubject();
+    if (!ok) {
+      await selectSubject();
+      ok = await hasSelection();
+      if (!ok) return false;
+    }
+    if (kind === "skin") {
+      await subtractPeople(PEOPLE_TAGS.eyes);
+      await subtractPeople(PEOPLE_TAGS.lips);
+      await subtractPeople(PEOPLE_TAGS.brows);
+      await subtractPeople(["Teeth"]);
+      await intersectSubject();
+    }
     return await hasSelection();
   }
 
@@ -290,8 +423,9 @@
       }
       var ok = await selectAI(kind);
       if (ok) {
-        try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
+        await refineSel(kind);
         await addMask("selection");
+        if (kind === "skin") await blendIfMids();
       } else {
         await addMask("reveal");
       }
