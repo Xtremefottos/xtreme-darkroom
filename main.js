@@ -130,6 +130,8 @@
       var host = ctx.hostControl;
       var token = await host.suspendHistory({ documentID: doc.id, name: name });
       try {
+        await promoteBackground(doc);
+        try { await deselect(); } catch (e) {}
         await fn(doc);
       } finally {
         await host.resumeHistory(token);
@@ -299,11 +301,76 @@
     try { await deselect(); } catch (e) {}
   }
 
+  async function promoteBackground(doc) {
+    try {
+      var layers = doc.layers;
+      for (var i = 0; i < layers.length; i++) {
+        try {
+          if (layers[i].isBackgroundLayer) {
+            layers[i].isBackgroundLayer = false;
+            if (!layers[i].name) layers[i].name = "Fundo";
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+    try {
+      await bp([{
+        _obj: "set",
+        _target: [{ _ref: "layer", _property: "background" }],
+        to: {
+          _obj: "layer",
+          opacity: { _unit: "percentUnit", _value: 100 },
+          mode: { _enum: "blendMode", _value: "normal" }
+        }
+      }]);
+    } catch (e) {}
+  }
+
   async function stamp(doc, name) {
-    await bp([{ _obj: "mergeVisible", duplicate: true }]);
-    var layer = doc.activeLayers[0];
-    if (!layer) throw new Error("Não copiou a imagem. Desbloqueie o fundo e tente de novo.");
-    layer.name = name;
+    try { await deselect(); } catch (e) {}
+    await promoteBackground(doc);
+
+    var layer = null;
+    try {
+      await bp([{ _obj: "mergeVisible", duplicate: true }]);
+      layer = doc.activeLayers[0];
+    } catch (e) {}
+
+    if (!layer) {
+      try {
+        await bp([{
+          _obj: "set",
+          _target: [{ _ref: "channel", _property: "selection" }],
+          to: { _enum: "ordinal", _value: "allEnum" }
+        }]);
+        await bp([{ _obj: "copyMerged" }]);
+        try { await deselect(); } catch (e) {}
+        await bp([{ _obj: "paste", inPlace: true }]);
+        layer = doc.activeLayers[0];
+      } catch (e) {
+        try { await deselect(); } catch (e2) {}
+      }
+    }
+
+    if (!layer) {
+      try {
+        var src = (doc.activeLayers && doc.activeLayers[0]) || (doc.layers && doc.layers[0]);
+        if (src && typeof src.duplicate === "function") layer = await src.duplicate();
+      } catch (e) {}
+    }
+
+    if (!layer) {
+      try {
+        await bp([{
+          _obj: "duplicate",
+          _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
+        }]);
+        layer = doc.activeLayers[0];
+      } catch (e) {}
+    }
+
+    if (!layer) throw new Error("Não copiou a imagem. Clique na camada da foto e tente de novo.");
+    try { layer.name = name; } catch (e) {}
     return layer;
   }
 
@@ -913,7 +980,9 @@
 
   async function applyKeysToDoc(doc, keys, intensity) {
     for (var n = 0; n < keys.length; n++) {
-      await runKey(doc, keys[n], intensity);
+      try {
+        await runKey(doc, keys[n], intensity);
+      } catch (e) {}
     }
   }
 
@@ -964,6 +1033,8 @@
             name: "Xtreme · Lote"
           });
           try {
+            await promoteBackground(doc);
+            try { await deselect(); } catch (e) {}
             await applyKeysToDoc(doc, keys, state.intensity);
             ok += 1;
           } catch (e) {
