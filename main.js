@@ -151,6 +151,7 @@
   async function addMask(kind) {
     var using = "revealAll";
     if (kind === "selection") using = "revealSelection";
+    if (kind === "hide") using = "hideAll";
     try {
       await bp([{
         _obj: "make",
@@ -322,7 +323,7 @@
     var radius = 0.8;
     if (kind === "skin") { contract = 2; feather = 2.2; smooth = 4; shift = -10; radius = 0.6; }
     else if (kind === "hair") { expand = 2; feather = 5; smooth = 1; radius = 2.5; shift = 8; }
-    else if (kind === "eyes" || kind === "lips" || kind === "teeth") { contract = 1; feather = 1.1; smooth = 2; radius = 0.4; }
+    else if (kind === "eyes") { expand = 6; feather = 2.4; smooth = 2; radius = 0.5; }
     else if (kind === "subject") { feather = 2; smooth = 3; }
     else if (kind === "background") { expand = 4; feather = 3.5; smooth = 2; }
     if (contract) {
@@ -367,13 +368,81 @@
   }
 
   var PEOPLE_TAGS = {
-    skin: ["Facial skin", "Upper body skin", "Face Skin", "Skin"],
-    eyes: ["Eyes", "Iris", "Eye"],
-    teeth: ["Teeth"],
-    lips: ["Lips", "Mouth", "Lip"],
-    hair: ["Hair"],
-    brows: ["Eyebrows", "Eyebrow"]
+    skin: ["Facial skin", "Upper body skin", "Face Skin", "Skin", "Pele facial"],
+    eyes: ["Eyes", "Iris", "Eye", "Pupils", "Sclera", "Olhos", "Íris"],
+    teeth: ["Teeth", "Dentes"],
+    lips: ["Lips", "Mouth", "Lip", "Lábios", "Boca"],
+    hair: ["Hair", "Cabelo"],
+    brows: ["Eyebrows", "Eyebrow", "Sobrancelhas"]
   };
+
+  function unitVal(v) {
+    if (v == null) return 0;
+    if (typeof v === "number") return v;
+    if (typeof v === "object" && v.value != null) return Number(v.value) || 0;
+    return Number(v) || 0;
+  }
+
+  async function selectionIsFeature(maxRatio) {
+    if (!(await hasSelection())) return false;
+    try {
+      var b = app.activeDocument.selection.bounds;
+      var l = unitVal(b.left != null ? b.left : b[0]);
+      var t = unitVal(b.top != null ? b.top : b[1]);
+      var r = unitVal(b.right != null ? b.right : b[2]);
+      var bot = unitVal(b.bottom != null ? b.bottom : b[3]);
+      var area = Math.max(0, r - l) * Math.max(0, bot - t);
+      var dw = unitVal(app.activeDocument.width);
+      var dh = unitVal(app.activeDocument.height);
+      var da = Math.max(1, dw * dh);
+      return area > 40 && area < da * maxRatio;
+    } catch (e) {
+      try {
+        var g = await bp([{
+          _obj: "get",
+          _target: [
+            { _property: "selection" },
+            { _ref: "document", _enum: "ordinal", _value: "targetEnum" }
+          ]
+        }]);
+        var s = g && g[0];
+        if (!s) return false;
+        var l2 = unitVal(s.left), t2 = unitVal(s.top), r2 = unitVal(s.right), b2 = unitVal(s.bottom);
+        if (r2 <= l2 || b2 <= t2) return false;
+        var da2 = Math.max(1, unitVal(app.activeDocument.width) * unitVal(app.activeDocument.height));
+        var area2 = (r2 - l2) * (b2 - t2);
+        return area2 > 40 && area2 < da2 * maxRatio;
+      } catch (e2) {
+        return false;
+      }
+    }
+  }
+
+  async function selectFeature(kind) {
+    var tags = PEOPLE_TAGS[kind] || [];
+    var maxRatio = { eyes: 0.16, lips: 0.14, teeth: 0.1, brows: 0.14, hair: 0.65 }[kind] || 0.18;
+    async function tryCmd(cmd) {
+      try { await deselect(); } catch (e) {}
+      await bp([cmd]);
+      return await selectionIsFeature(maxRatio);
+    }
+    if (tags.length && await tryCmd({ _obj: "selectPeopleV2", selectAllPeople: true, tagsV2: tags })) return true;
+    for (var t = 0; t < tags.length; t++) {
+      if (await tryCmd({ _obj: "selectPeopleV2", selectAllPeople: true, tagsV2: [tags[t]] })) return true;
+    }
+    var primary = tags[0];
+    var idxs = kind === "eyes" ? [3, 4, 2, 5] : [6, 7, 8, 5, 4];
+    for (var n = 0; n < idxs.length; n++) {
+      if (await tryCmd({
+        _obj: "selectPeopleV2",
+        selectAllPeople: true,
+        tagsV2: [primary],
+        tagsIndices: [idxs[n]]
+      })) return true;
+    }
+    try { await deselect(); } catch (e) {}
+    return false;
+  }
 
   async function selectAI(kind) {
     try { await deselect(); } catch (e) {}
@@ -389,6 +458,9 @@
       if (await selectPeopleAI(null)) return true;
       await selectSubject();
       return await hasSelection();
+    }
+    if (kind === "eyes" || kind === "lips" || kind === "teeth" || kind === "brows") {
+      return await selectFeature(kind);
     }
     var tags = PEOPLE_TAGS[kind];
     var ok = !!(tags && await selectPeopleAI(tags));
@@ -418,6 +490,7 @@
   }
 
   async function finishMask(kind) {
+    var feature = kind === "eyes" || kind === "lips" || kind === "teeth" || kind === "brows";
     try {
       if (!kind || kind === "reveal") {
         await addMask("reveal");
@@ -430,10 +503,10 @@
         await addMask("selection");
         if (kind === "skin") await blendIfMids();
       } else {
-        await addMask("reveal");
+        await addMask(feature ? "hide" : "reveal");
       }
     } catch (e) {
-      await addMask("reveal");
+      await addMask(feature ? "hide" : "reveal");
     }
     try { await deselect(); } catch (e) {}
   }
@@ -1263,7 +1336,7 @@
       }
       case "teeth":
       case "dentesBrancos":
-        await selectAI("teeth");
+        if (!(await selectAI("teeth"))) return;
         await bp([{
           _obj: "make",
           _target: [{ _ref: "adjustmentLayer" }],
@@ -1385,7 +1458,7 @@
         return;
       }
       case "olhosTrocarCor":
-        await selectAI("eyes");
+        if (!(await selectAI("eyes"))) return;
         await bp([{
           _obj: "make",
           _target: [{ _ref: "adjustmentLayer" }],
