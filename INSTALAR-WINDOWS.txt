@@ -1,0 +1,19 @@
+Xtreme Darkroom — instalar e testar (Windows)
+Photoshop 24.2 ou mais novo.
+
+1. PREPARAR
+- Creative Cloud atualizado, Photoshop 24.2+.
+- Instalar UXP Developer Tools no Creative Cloud.
+- Abrir o UDT e marcar Enable Developer Mode.
+- Photoshop > Editar > Preferencias > Plug-ins > Ativar modo do desenvolvedor.
+
+2. EXTRAIR
+- Extraia o zip do GitHub (Code > Download ZIP).
+- A pasta tem de conter manifest.json.
+- Nao carregue o arquivo .zip no UDT.
+
+3. LOAD
+- Photoshop aberto + UXP Developer Tool.
+- Add Plugin > selecione manifest.json
+- ... > Load
+- Photoshop: Plug-ins > Paineis de plug-ins > Xtreme Darkroom
