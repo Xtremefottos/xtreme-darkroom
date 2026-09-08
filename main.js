@@ -1271,50 +1271,36 @@
     return await hasSelection();
   }
 
-  async function groupNamedLayers(names, groupName) {
-    if (!names || !names.length) return;
-    for (var n = 0; n < names.length; n++) {
-      var cmd = { _obj: "select", _target: [{ _ref: "layer", _name: names[n] }] };
-      if (n > 0) cmd.selectionModifier = { _enum: "selectionModifierType", _value: "addToSelection" };
-      await bp([cmd]);
+  async function groupByIds(ids, groupName) {
+    if (!ids || !ids.length) return;
+    await bp([{
+      _obj: "select",
+      _target: [{ _ref: "layer", _id: ids[0] }],
+      makeVisible: false
+    }]);
+    for (var n = 1; n < ids.length; n++) {
+      await bp([{
+        _obj: "select",
+        _target: [{ _ref: "layer", _id: ids[n] }],
+        selectionModifier: { _enum: "selectionModifierType", _value: "addToSelection" },
+        makeVisible: false
+      }]);
     }
     await bp([{
       _obj: "make",
       _target: [{ _ref: "layerSection" }],
+      from: { _ref: "layer", _enum: "ordinal", _value: "targetEnum" },
       using: { _obj: "layerSection", name: groupName }
     }]);
   }
 
   async function eyesPro(doc, i) {
-    var names = [];
-
-    if (await selectSclera()) {
-      await refineSel("sclera");
-      await bp([{
-        _obj: "make",
-        _target: [{ _ref: "adjustmentLayer" }],
-        using: {
-          _obj: "adjustmentLayer",
-          type: {
-            _obj: "hueSaturation",
-            colorize: false,
-            adjustment: [
-              { _obj: "hueSatAdjustmentV2", hue: 0, saturation: rnd(lerp(i, -18, -8)), lightness: rnd(lerp(i, 6, 16)) },
-              {
-                _obj: "hueSatAdjustmentV2",
-                localRange: 1,
-                beginRamp: 315, beginSustain: 345, endSustain: 15, endRamp: 45,
-                hue: 0,
-                saturation: rnd(lerp(i, -30, -12)),
-                lightness: rnd(lerp(i, 4, 10))
-              }
-            ]
-          },
-          name: "XT · Esclera / conjuntiva"
-        }
-      }]);
-      try { await deselect(); } catch (e) {}
-      names.push("XT · Esclera / conjuntiva");
+    var ids = [];
+    function take() {
+      try {
+        var id = doc.activeLayers[0] && doc.activeLayers[0].id;
+        if (id != null) ids.push(id);
+      } catch (e) {}
     }
 
     var iris = await stamp(doc, "XT · Íris");
@@ -1322,7 +1308,7 @@
     await setBlend(iris, "softLight");
     iris.opacity = lerp(i, 28, 55);
     await finishMask("iris");
-    names.push("XT · Íris");
+    take();
 
     if (await selectFeature("iris")) {
       await refineSel("iris");
@@ -1345,7 +1331,7 @@
         }
       }]);
       try { await deselect(); } catch (e) {}
-      names.push("XT · Cor da íris");
+      take();
     }
 
     if (await selectFeature("pupil")) {
@@ -1372,7 +1358,7 @@
         }
       }]);
       try { await deselect(); } catch (e) {}
-      names.push("XT · Pupila");
+      take();
     }
 
     var cor = await stamp(doc, "XT · Córnea");
@@ -1392,9 +1378,9 @@
     if (!gotCornea) await addMask("hide");
     await blendRange(0, 0, 255, 255, 0, 155, 255, 255);
     try { await deselect(); } catch (e) {}
-    names.push("XT · Córnea");
+    take();
 
-    try { await groupNamedLayers(names, "XT · Olhos"); } catch (e) {}
+    try { await groupByIds(ids, "XT · Olhos"); } catch (e) {}
   }
 
   async function bgClean(doc, i, mode) {
