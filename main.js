@@ -87,10 +87,10 @@
   };
 
   var CLASS_KEYS = {
-    casamento: ["pelePerfeita", "freqSep", "dodge", "olhosMagicos", "dentesBrancos", "contrasteFinal", "limparFundo", "tomPele"],
+    casamento: ["pelePerfeita", "freqSep", "dodgeBurn", "olhosMagicos", "dentesBrancos", "contrasteFinal", "limparFundo", "tomPele"],
     quinze: ["pelePerfeita", "glamourGlow", "olhosMagicos", "dentesBrancos", "batom", "contrasteFinal", "nitidez12"],
     corporativo: ["remManchas", "freqSep", "eyes", "contrasteFinal", "limparFundo", "nitidez12"],
-    beauty: ["peleDoBruxo", "freqSep", "glamourGlow", "olhosMagicos", "dentesBrancos", "batom", "contrasteFinal"],
+    beauty: ["peleDoBruxo", "freqSep", "dodgeBurn", "glamourGlow", "olhosMagicos", "dentesBrancos", "batom", "contrasteFinal"],
     newborn: ["skinHeal", "tomPele", "glamourGlow", "contrasteFinal"],
     externa: ["pelePerfeita", "olhosMagicos", "nitidez12", "limparFundoExterna", "desfoque", "contrasteFinal"]
   };
@@ -763,14 +763,75 @@
     layer.opacity = lerp(i, 55, 85);
   }
 
-  async function grayDB(doc, name) {
-    await bp([{ _obj: "make", _target: [{ _ref: "layer" }] }]);
-    var layer = doc.activeLayers[0];
-    layer.name = name;
-    await fillGray();
-    await setBlend(layer, "softLight");
-    await addMask("reveal");
-    return layer;
+  async function blendRange(s0, s1, s2, s3, d0, d1, d2, d3) {
+    try {
+      await bp([{
+        _obj: "set",
+        _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+        to: {
+          _obj: "layer",
+          blendRange: [{
+            _obj: "blendRange",
+            channel: { _ref: "channel", _enum: "channel", _value: "gray" },
+            srcBlackMin: s0,
+            srcBlackMax: s1,
+            srcWhiteMin: s2,
+            srcWhiteMax: s3,
+            destBlackMin: d0,
+            destBlackMax: d1,
+            destWhiteMin: d2,
+            destWhiteMax: d3
+          }]
+        }
+      }]);
+    } catch (e) {}
+  }
+
+  async function dodgeBurnPro(doc, i, scope) {
+    scope = scope || "subject";
+    var w = 3000, h = 4000;
+    try {
+      w = doc.width && doc.width.value != null ? doc.width.value : doc.width;
+      h = doc.height && doc.height.value != null ? doc.height.value : doc.height;
+    } catch (e) {}
+    var minSide = Math.min(Number(w) || 3000, Number(h) || 4000);
+    var hp = Math.max(14, Math.min(90, lerp(i, minSide / 130, minSide / 65)));
+
+    var vol = await stamp(doc, "XT · D&B Volume");
+    await highPass(vol, hp);
+    await setBlend(vol, "softLight");
+    vol.opacity = lerp(i, 34, 64);
+    await finishMask(scope);
+    await blendIfMids();
+
+    var dodge = await stamp(doc, "XT · Dodge");
+    await setBlend(dodge, "screen");
+    dodge.opacity = lerp(i, 12, 24);
+    await finishMask(scope);
+    await blendRange(0, 0, 255, 255, 0, 78, 255, 255);
+
+    var burn = await stamp(doc, "XT · Burn");
+    await setBlend(burn, "multiply");
+    burn.opacity = lerp(i, 10, 22);
+    await finishMask(scope);
+    await blendRange(0, 0, 255, 255, 0, 0, 178, 255);
+  }
+
+  async function dodgeEyes(doc, i) {
+    var d = await stamp(doc, "XT · Dodge olhos");
+    await unsharp(d, lerp(i, 28, 70), 1.15);
+    await setBlend(d, "screen");
+    d.opacity = lerp(i, 20, 42);
+    await finishMask("eyes");
+    await blendRange(0, 0, 255, 255, 0, 60, 255, 255);
+  }
+
+  async function burnEyes(doc, i) {
+    var b = await stamp(doc, "XT · Contorno olhos");
+    await setBlend(b, "multiply");
+    b.opacity = lerp(i, 10, 22);
+    await finishMask("eyes");
+    await blendRange(0, 0, 255, 255, 0, 0, 190, 255);
   }
 
   async function bgClean(doc, i, mode) {
@@ -871,23 +932,18 @@
         return;
       }
       case "dodgeBurn":
-        await grayDB(doc, "XT · D&B", i);
-        return;
       case "dodge":
-        await adjCurvesUp("XT · Dodge", "skin");
+      case "dbCurvas":
+        await dodgeBurnPro(doc, i, "subject");
         return;
       case "dbOlhos":
-        await adjCurvesUp("XT · Dodge", "eyes");
+        await dodgeEyes(doc, i);
         return;
       case "burn":
-        await adjCurvesDown("XT · Burn", "skin");
+        await dodgeBurnPro(doc, Math.max(20, i * 0.7), "subject");
         return;
       case "olhosContorno":
-        await adjCurvesDown("XT · Burn", "eyes");
-        return;
-      case "dbCurvas":
-        await adjCurvesUp("XT · Dodge");
-        await adjCurvesDown("XT · Burn");
+        await burnEyes(doc, i);
         return;
       case "eyes":
       case "olhosMagicos":
