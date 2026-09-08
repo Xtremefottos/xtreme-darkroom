@@ -16,18 +16,6 @@
 
   <div class="scroll">
     <section class="block">
-      <span class="lbl">Perfil de sessão</span>
-      <div class="row" id="profiles">
-      <div class="chip active" data-profile="casamento">Casamento</div>
-      <div class="chip" data-profile="quinze">15 anos</div>
-      <div class="chip" data-profile="corporativo">Corporativo</div>
-      <div class="chip" data-profile="beauty">Beauty</div>
-      <div class="chip" data-profile="newborn">Newborn</div>
-      <div class="chip" data-profile="externa">Externa</div>
-      </div>
-    </section>
-
-    <section class="block">
       <div class="row between">
         <span class="lbl">Intensidade</span>
         <span class="val" id="intVal">50</span>
@@ -44,21 +32,17 @@
         <div class="ghost" id="loteAll">Marcar todas</div>
         <div class="ghost" id="loteNone">Desmarcar todas</div>
       </div>
-      <p class="hint">Deixar pronta = foto atual com o marcado. Lote todas = todos os documentos. Máscara já recortada no sujeito/pele/fundo.</p>
+      <span class="lbl" style="margin-top:12px">Classe de edição</span>
+      <div class="row" id="profiles">
+      <div class="chip active" data-profile="casamento">Casamento</div>
+      <div class="chip" data-profile="quinze">15 anos</div>
+      <div class="chip" data-profile="corporativo">Corporativo</div>
+      <div class="chip" data-profile="beauty">Beauty</div>
+      <div class="chip" data-profile="newborn">Newborn</div>
+      <div class="chip" data-profile="externa">Externa</div>
+      </div>
+      <p class="hint">A classe marca as funções do ensaio. Deixar pronta = foto atual. Lote todas = documentos abertos.</p>
     </section>
-
-    <div class="tabs" id="tabs">
-        <div class="tab active" data-tab="rapidos">Rápidos</div>
-        <div class="tab" data-tab="estudio">Estúdio</div>
-        <div class="tab" data-tab="pele">Pele</div>
-        <div class="tab" data-tab="db">Dodge and burn</div>
-        <div class="tab" data-tab="olhos">Olhos</div>
-        <div class="tab" data-tab="boca">Batom e dentes</div>
-        <div class="tab" data-tab="detalhes">Detalhes</div>
-        <div class="tab" data-tab="desfoque">Desfoque</div>
-        <div class="tab" data-tab="final">Finalização</div>
-        <div class="tab" data-tab="salvar">Salvamento</div>
-    </div>
 
     <div class="sec open" data-sec="rapidos">
       <div class="sec-head" data-toggle="rapidos">
@@ -99,9 +83,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="estudio">
+    <div class="sec open" data-sec="estudio">
       <div class="sec-head" data-toggle="estudio">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Estúdio</span>
         <div class="link" data-lote-sec="estudio">Lote seção</div>
       </div>
@@ -138,9 +122,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="pele">
+    <div class="sec open" data-sec="pele">
       <div class="sec-head" data-toggle="pele">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Pele</span>
         <div class="link" data-lote-sec="pele">Lote seção</div>
       </div>
@@ -182,9 +166,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="db">
+    <div class="sec open" data-sec="db">
       <div class="sec-head" data-toggle="db">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Dodge and burn</span>
         <div class="link" data-lote-sec="db">Lote seção</div>
       </div>
@@ -216,9 +200,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="olhos">
+    <div class="sec open" data-sec="olhos">
       <div class="sec-head" data-toggle="olhos">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Olhos</span>
         <div class="link" data-lote-sec="olhos">Lote seção</div>
       </div>
@@ -250,9 +234,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="boca">
+    <div class="sec open" data-sec="boca">
       <div class="sec-head" data-toggle="boca">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Batom e dentes</span>
         <div class="link" data-lote-sec="boca">Lote seção</div>
       </div>
@@ -279,9 +263,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="detalhes">
+    <div class="sec open" data-sec="detalhes">
       <div class="sec-head" data-toggle="detalhes">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Detalhes</span>
         <div class="link" data-lote-sec="detalhes">Lote seção</div>
       </div>
@@ -308,9 +292,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="desfoque">
+    <div class="sec open" data-sec="desfoque">
       <div class="sec-head" data-toggle="desfoque">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Desfoque</span>
         <div class="link" data-lote-sec="desfoque">Lote seção</div>
       </div>
@@ -327,9 +311,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="final">
+    <div class="sec open" data-sec="final">
       <div class="sec-head" data-toggle="final">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Finalização</span>
         <div class="link" data-lote-sec="final">Lote seção</div>
       </div>
@@ -361,9 +345,9 @@
       </div>
       </div>
     </div>
-    <div class="sec closed" data-sec="salvar">
+    <div class="sec open" data-sec="salvar">
       <div class="sec-head" data-toggle="salvar">
-        <span class="chev">▸</span>
+        <span class="chev">▾</span>
         <span class="lbl">Salvamento</span>
         <div class="link" data-lote-sec="salvar">Lote seção</div>
       </div>
