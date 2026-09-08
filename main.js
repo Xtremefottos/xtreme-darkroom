@@ -325,6 +325,8 @@
     else if (kind === "hair") { expand = 2; feather = 5; smooth = 1; radius = 2.5; shift = 8; }
     else if (kind === "eyes") { expand = 4; feather = 2.2; smooth = 2; radius = 0.5; }
     else if (kind === "iris") { expand = 1; feather = 1.2; smooth = 1; radius = 0.3; }
+    else if (kind === "pupil") { expand = 0; feather = 0.6; smooth = 1; radius = 0.2; }
+    else if (kind === "cornea") { expand = 1; feather = 1.4; smooth = 1; radius = 0.4; }
     else if (kind === "sclera") { expand = 2; feather = 1.8; smooth = 2; radius = 0.4; }
     else if (kind === "lips" || kind === "teeth") { contract = 0; expand = 1; feather = 1.1; smooth = 2; radius = 0.4; }
     else if (kind === "subject") { feather = 2; smooth = 3; }
@@ -373,8 +375,9 @@
   var PEOPLE_TAGS = {
     skin: ["Facial skin", "Upper body skin", "Face Skin", "Skin", "Pele facial"],
     eyes: ["Eyes", "Eye", "Olhos"],
-    iris: ["Iris", "Pupils", "Íris", "Pupila"],
-    sclera: ["Sclera", "Eye white", "Whites of the eyes", "White of the eye", "Esclerótica"],
+    iris: ["Iris", "Íris"],
+    pupil: ["Pupils", "Pupil", "Pupila"],
+    sclera: ["Sclera", "Conjunctiva", "Eye white", "Whites of the eyes", "White of the eye", "Esclerótica", "Conjuntiva"],
     teeth: ["Teeth", "Dentes"],
     lips: ["Lips", "Mouth", "Lip", "Lábios", "Boca"],
     hair: ["Hair", "Cabelo"],
@@ -388,7 +391,8 @@
     return Number(v) || 0;
   }
 
-  async function selectionIsFeature(maxRatio) {
+  async function selectionIsFeature(maxRatio, minArea) {
+    minArea = minArea != null ? minArea : 40;
     if (!(await hasSelection())) return false;
     try {
       var b = app.activeDocument.selection.bounds;
@@ -400,7 +404,7 @@
       var dw = unitVal(app.activeDocument.width);
       var dh = unitVal(app.activeDocument.height);
       var da = Math.max(1, dw * dh);
-      return area > 40 && area < da * maxRatio;
+      return area > minArea && area < da * maxRatio;
     } catch (e) {
       try {
         var g = await bp([{
@@ -416,7 +420,7 @@
         if (r2 <= l2 || b2 <= t2) return false;
         var da2 = Math.max(1, unitVal(app.activeDocument.width) * unitVal(app.activeDocument.height));
         var area2 = (r2 - l2) * (b2 - t2);
-        return area2 > 40 && area2 < da2 * maxRatio;
+        return area2 > minArea && area2 < da2 * maxRatio;
       } catch (e2) {
         return false;
       }
@@ -425,11 +429,12 @@
 
   async function selectFeature(kind) {
     var tags = PEOPLE_TAGS[kind] || [];
-    var maxRatio = { eyes: 0.16, iris: 0.1, sclera: 0.12, lips: 0.14, teeth: 0.1, brows: 0.14, hair: 0.65 }[kind] || 0.18;
+    var maxRatio = { eyes: 0.16, iris: 0.1, pupil: 0.05, sclera: 0.12, lips: 0.14, teeth: 0.1, brows: 0.14, hair: 0.65 }[kind] || 0.18;
+    var minArea = kind === "pupil" ? 8 : 40;
     async function tryCmd(cmd) {
       try { await deselect(); } catch (e) {}
       await bp([cmd]);
-      return await selectionIsFeature(maxRatio);
+      return await selectionIsFeature(maxRatio, minArea);
     }
     if (tags.length && await tryCmd({ _obj: "selectPeopleV2", selectAllPeople: true, tagsV2: tags })) return true;
     for (var t = 0; t < tags.length; t++) {
@@ -437,8 +442,9 @@
     }
     var primary = tags[0];
     var idxs = kind === "eyes" ? [3, 4, 2, 5]
-      : kind === "iris" ? [4, 3, 5, 2]
-      : kind === "sclera" ? [5, 4, 3, 6]
+      : kind === "iris" ? [4, 3, 5]
+      : kind === "pupil" ? [5, 4, 3]
+      : kind === "sclera" ? [6, 5, 4, 3]
       : [6, 7, 8, 5, 4];
     for (var n = 0; n < idxs.length; n++) {
       if (await tryCmd({
@@ -467,7 +473,7 @@
       await selectSubject();
       return await hasSelection();
     }
-    if (kind === "eyes" || kind === "iris" || kind === "sclera" || kind === "lips" || kind === "teeth" || kind === "brows") {
+    if (kind === "eyes" || kind === "iris" || kind === "pupil" || kind === "sclera" || kind === "lips" || kind === "teeth" || kind === "brows") {
       return await selectFeature(kind);
     }
     var tags = PEOPLE_TAGS[kind];
@@ -498,7 +504,7 @@
   }
 
   async function finishMask(kind) {
-    var feature = kind === "eyes" || kind === "iris" || kind === "sclera" || kind === "lips" || kind === "teeth" || kind === "brows";
+    var feature = kind === "eyes" || kind === "iris" || kind === "pupil" || kind === "sclera" || kind === "cornea" || kind === "lips" || kind === "teeth" || kind === "brows";
     try {
       if (!kind || kind === "reveal") {
         await addMask("reveal");
@@ -1231,17 +1237,38 @@
     if (await selectFeature("sclera")) return true;
     if (!(await selectFeature("eyes"))) return false;
     if (!(await saveSel("XT · eyeAll"))) return false;
-    if (await selectFeature("iris")) {
-      await saveSel("XT · irisCut");
+    async function subtractKind(kind) {
+      if (!(await selectFeature(kind))) {
+        await loadSel("XT · eyeAll");
+        return;
+      }
+      await saveSel("XT · cut");
       await loadSel("XT · eyeAll");
-      await loadSel("XT · irisCut", "subtractFromSelection");
-      await deleteChannel("XT · irisCut");
-      await deleteChannel("XT · eyeAll");
-      return await selectionIsFeature(0.14);
+      await loadSel("XT · cut", "subtractFromSelection");
+      await saveSel("XT · eyeAll");
+      await deleteChannel("XT · cut");
     }
+    await subtractKind("iris");
+    await subtractKind("pupil");
     await loadSel("XT · eyeAll");
     await deleteChannel("XT · eyeAll");
-    return false;
+    return await selectionIsFeature(0.14, 40);
+  }
+
+  async function addFeatureToSel(kind) {
+    if (!(await hasSelection())) return await selectFeature(kind);
+    if (!(await saveSel("XT · keepAdd"))) return false;
+    if (!(await selectFeature(kind))) {
+      await loadSel("XT · keepAdd");
+      await deleteChannel("XT · keepAdd");
+      return await hasSelection();
+    }
+    await saveSel("XT · more");
+    await loadSel("XT · keepAdd");
+    await loadSel("XT · more", "addToSelection");
+    await deleteChannel("XT · more");
+    await deleteChannel("XT · keepAdd");
+    return await hasSelection();
   }
 
   async function groupNamedLayers(names, groupName) {
@@ -1260,6 +1287,35 @@
 
   async function eyesPro(doc, i) {
     var names = [];
+
+    if (await selectSclera()) {
+      await refineSel("sclera");
+      await bp([{
+        _obj: "make",
+        _target: [{ _ref: "adjustmentLayer" }],
+        using: {
+          _obj: "adjustmentLayer",
+          type: {
+            _obj: "hueSaturation",
+            colorize: false,
+            adjustment: [
+              { _obj: "hueSatAdjustmentV2", hue: 0, saturation: rnd(lerp(i, -18, -8)), lightness: rnd(lerp(i, 6, 16)) },
+              {
+                _obj: "hueSatAdjustmentV2",
+                localRange: 1,
+                beginRamp: 315, beginSustain: 345, endSustain: 15, endRamp: 45,
+                hue: 0,
+                saturation: rnd(lerp(i, -30, -12)),
+                lightness: rnd(lerp(i, 4, 10))
+              }
+            ]
+          },
+          name: "XT · Esclera / conjuntiva"
+        }
+      }]);
+      try { await deselect(); } catch (e) {}
+      names.push("XT · Esclera / conjuntiva");
+    }
 
     var iris = await stamp(doc, "XT · Íris");
     await unsharp(iris, lerp(i, 45, 95), 1.2);
@@ -1292,34 +1348,51 @@
       names.push("XT · Cor da íris");
     }
 
-    if (await selectSclera()) {
-      await refineSel("sclera");
+    if (await selectFeature("pupil")) {
+      await refineSel("pupil");
       await bp([{
         _obj: "make",
         _target: [{ _ref: "adjustmentLayer" }],
         using: {
           _obj: "adjustmentLayer",
           type: {
-            _obj: "hueSaturation",
-            colorize: false,
-            adjustment: [
-              { _obj: "hueSatAdjustmentV2", hue: 0, saturation: rnd(lerp(i, -18, -8)), lightness: rnd(lerp(i, 6, 16)) },
-              {
-                _obj: "hueSatAdjustmentV2",
-                localRange: 1,
-                beginRamp: 315, beginSustain: 345, endSustain: 15, endRamp: 45,
-                hue: 0,
-                saturation: rnd(lerp(i, -30, -12)),
-                lightness: rnd(lerp(i, 4, 10))
-              }
-            ]
+            _obj: "curves",
+            presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+            adjustment: [{
+              _obj: "curvesAdjustment",
+              channel: { _ref: "channel", _enum: "channel", _value: "composite" },
+              curve: [
+                { _obj: "paint", horizontal: 0, vertical: 0 },
+                { _obj: "paint", horizontal: 128, vertical: rnd(lerp(i, 110, 96)) },
+                { _obj: "paint", horizontal: 255, vertical: 255 }
+              ]
+            }]
           },
-          name: "XT · Branco do olho"
+          name: "XT · Pupila"
         }
       }]);
       try { await deselect(); } catch (e) {}
-      names.push("XT · Branco do olho");
+      names.push("XT · Pupila");
     }
+
+    var cor = await stamp(doc, "XT · Córnea");
+    await setBlend(cor, "screen");
+    cor.opacity = lerp(i, 10, 22);
+    var gotCornea = false;
+    if (await selectFeature("iris")) {
+      await addFeatureToSel("pupil");
+      await refineSel("cornea");
+      await addMask("selection");
+      gotCornea = true;
+    } else if (await selectFeature("pupil")) {
+      await refineSel("cornea");
+      await addMask("selection");
+      gotCornea = true;
+    }
+    if (!gotCornea) await addMask("hide");
+    await blendRange(0, 0, 255, 255, 0, 155, 255, 255);
+    try { await deselect(); } catch (e) {}
+    names.push("XT · Córnea");
 
     try { await groupNamedLayers(names, "XT · Olhos"); } catch (e) {}
   }
