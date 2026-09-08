@@ -107,11 +107,50 @@
     }, { commandName: name });
   }
 
-  async function stamp(doc, name) {
+  async function addMask(kind) {
+    var using = "revealAll";
+    if (kind === "hide") using = "hideAll";
+    if (kind === "selection") using = "revealSelection";
+    try {
+      await bp([{
+        _obj: "make",
+        new: { _class: "channel" },
+        at: { _ref: "channel", _enum: "channel", _value: "mask" },
+        using: { _enum: "userMaskEnabled", _value: using }
+      }]);
+    } catch (e) {
+      if (kind === "selection") {
+        try {
+          await bp([{
+            _obj: "make",
+            new: { _class: "channel" },
+            at: { _ref: "channel", _enum: "channel", _value: "mask" },
+            using: { _enum: "userMaskEnabled", _value: "revealAll" }
+          }]);
+        } catch (e2) {}
+      }
+    }
+  }
+
+  async function selectMask() {
+    try {
+      await bp([{
+        _obj: "select",
+        _target: [{ _ref: "channel", _enum: "ordinal", _value: "targetEnum", _mask: "userMask" }]
+      }]);
+    } catch (e) {
+      try {
+        await bp([{ _obj: "select", _target: [{ _ref: "channel", _enum: "channel", _value: "mask" }] }]);
+      } catch (e2) {}
+    }
+  }
+
+  async function stamp(doc, name, maskKind) {
     await bp([{ _obj: "mergeVisible", duplicate: true }]);
     var layer = doc.activeLayers[0];
     if (!layer) throw new Error("Não copiou a imagem. Desbloqueie o fundo e tente de novo.");
     layer.name = name;
+    if (maskKind !== "none") await addMask(maskKind || "reveal");
     return layer;
   }
 
@@ -317,6 +356,7 @@
         };
     await bp([apply]);
     await setBlend(doc.activeLayers[0], "linearLight");
+    await addMask("reveal");
   }
 
   async function neuralSkin(doc, i) {
@@ -349,11 +389,12 @@
     layer.name = name;
     await fillGray();
     await setBlend(layer, "softLight");
+    await addMask("reveal");
     return layer;
   }
 
   async function bgClean(doc, i, mode) {
-    var layer = await stamp(doc, mode === "externa" ? "XT · Fundo externa" : "XT · Fundo limpo");
+    var layer = await stamp(doc, mode === "externa" ? "XT · Fundo externa" : "XT · Fundo limpo", "none");
     await selectSubject();
     await invertSel();
     try {
@@ -376,7 +417,9 @@
         await gauss(layer, lerp(i, 4, 12));
       }
     }
+    await addMask("selection");
     try { await deselect(); } catch (e) {}
+    await selectMask();
   }
 
   var ACR_LOOK = {
@@ -446,22 +489,26 @@
       case "dodge":
       case "dbOlhos":
         await adjCurvesUp("XT · Dodge");
+        await selectMask();
         return;
       case "burn":
       case "olhosContorno":
         await adjCurvesDown("XT · Burn");
+        await selectMask();
         return;
       case "dbCurvas":
         await adjCurvesUp("XT · Dodge");
         await adjCurvesDown("XT · Burn");
+        await selectMask();
         return;
       case "eyes":
       case "olhosMagicos":
       case "olhosNitidez": {
-        var o = await stamp(doc, "XT · Olhos");
+        var o = await stamp(doc, "XT · Olhos", "hide");
         await unsharp(o, lerp(i, 40, 90), 1.3);
         await setBlend(o, "softLight");
         o.opacity = lerp(i, 22, 50);
+        await selectMask();
         return;
       }
       case "teeth":
@@ -552,36 +599,42 @@
         await bgClean(doc, i, "externa");
         return;
       case "destaque": {
+        var d = await stamp(doc, "XT · Destaque", "none");
         await selectSubject();
-        var d = await stamp(doc, "XT · Destaque");
         await bp([{
           _obj: "brightnessEvent",
           brightness: rnd(lerp(i, 4, 14)),
           contrast: rnd(lerp(i, 2, 10)),
           useLegacy: false
         }]);
+        await addMask("selection");
         try { await deselect(); } catch (e) {}
+        await selectMask();
         return;
       }
       case "escurecer":
       case "contrasteFundo":
-      case "luzBaixa":
+      case "luzBaixa": {
+        var b = await stamp(doc, "XT · " + ATOM[key].label, "none");
         await selectSubject();
         await invertSel();
-        var b = await stamp(doc, "XT · " + ATOM[key].label);
         await bp([{
           _obj: "brightnessEvent",
           brightness: rnd(lerp(i, -8, -22)),
           contrast: rnd(lerp(i, 4, 14)),
           useLegacy: false
         }]);
+        await addMask("selection");
         try { await deselect(); } catch (e) {}
+        await selectMask();
         return;
+      }
       case "remCabeloRosto": {
-        var h = await stamp(doc, "XT · Cabelo");
+        var h = await stamp(doc, "XT · Cabelo", "hide");
         if (typeof h.applyDustAndScratches === "function") await h.applyDustAndScratches(rnd(lerp(i, 2, 6)), 8);
         else await surface(h, lerp(i, 3, 8), 6);
         h.opacity = lerp(i, 20, 45);
+        await selectMask();
         return;
       }
       case "olhosTrocarCor":
@@ -713,24 +766,54 @@
       cb.addEventListener("change", refreshLote);
     });
     document.querySelectorAll("[data-lote-sec]").forEach(function (tog) {
-      tog.addEventListener("click", function () {
-        var boxes = [];
-        var node = tog.parentElement.nextElementSibling;
-        while (node && node.className === "tool") {
-          var input = node.querySelector("[data-lote]");
-          if (input) boxes.push(input);
-          node = node.nextElementSibling;
-        }
-        var allOn = boxes.length && boxes.every(function (b) { return b.checked; });
-        boxes.forEach(function (b) { b.checked = !allOn; });
+      tog.addEventListener("click", function (e) {
+        if (e.stopPropagation) e.stopPropagation();
+        var sec = tog.parentElement.parentElement;
+        var boxes = sec.querySelectorAll("[data-lote]");
+        var allOn = boxes.length && Array.prototype.every.call(boxes, function (b) { return b.checked; });
+        Array.prototype.forEach.call(boxes, function (b) { b.checked = !allOn; });
         tog.textContent = !allOn ? "Lote off" : "Lote seção";
         refreshLote();
       });
     });
+    document.querySelectorAll("[data-toggle]").forEach(function (head) {
+      head.addEventListener("click", function (e) {
+        if (e.target && e.target.getAttribute && e.target.getAttribute("data-lote-sec")) return;
+        var sec = head.parentElement;
+        var open = String(sec.className).indexOf("open") >= 0;
+        sec.className = open ? "sec closed" : "sec open";
+        var chev = head.querySelector(".chev");
+        if (chev) chev.textContent = open ? "▸" : "▾";
+      });
+    });
+    document.querySelectorAll("[data-tab]").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var id = tab.getAttribute("data-tab");
+        document.querySelectorAll("[data-tab]").forEach(function (t) {
+          t.className = t.getAttribute("data-tab") === id ? "tab active" : "tab";
+        });
+        document.querySelectorAll("[data-sec]").forEach(function (sec) {
+          var on = sec.getAttribute("data-sec") === id;
+          sec.className = on ? "sec open" : "sec closed";
+          var chev = sec.querySelector(".chev");
+          if (chev) chev.textContent = on ? "▾" : "▸";
+        });
+      });
+    });
+    var allBtn = document.getElementById("loteAll");
+    var noneBtn = document.getElementById("loteNone");
+    if (allBtn) allBtn.addEventListener("click", function () {
+      document.querySelectorAll("[data-lote]").forEach(function (cb) { cb.checked = true; });
+      refreshLote();
+    });
+    if (noneBtn) noneBtn.addEventListener("click", function () {
+      document.querySelectorAll("[data-lote]").forEach(function (cb) { cb.checked = false; });
+      refreshLote();
+    });
     document.getElementById("applyProfile").addEventListener("click", function () { runLook(); });
     document.getElementById("runBatch").addEventListener("click", function () { runLote(); });
     refreshLote();
-    setStatus("Pronto · píxeis, não pastas");
+    setStatus("Pronto · máscaras em todas as camadas");
   }
 
   try { bind(); } catch (err) { setStatus("Falha ao ligar UI: " + err.message, true); }
