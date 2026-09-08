@@ -1,8 +1,8 @@
 {
   "manifestVersion": 5,
-  "id": "br.com.xtremefotos.darkroom",
+  "id": "br.com.xtremefotos.darkroom.v2",
   "name": "Xtreme Darkroom",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "index.html",
   "host": [
     {
@@ -13,14 +13,14 @@
   "entrypoints": [
     {
       "type": "panel",
-      "id": "xtremeDarkroom",
+      "id": "xtremeDarkroomV2",
       "label": {
         "default": "Xtreme Darkroom"
       },
-      "minimumSize": { "width": 280, "height": 420 },
-      "maximumSize": { "width": 420, "height": 2000 },
-      "preferredDockedSize": { "width": 320, "height": 720 },
-      "preferredFloatingSize": { "width": 320, "height": 780 }
+      "minimumSize": { "width": 280, "height": 480 },
+      "maximumSize": { "width": 480, "height": 2000 },
+      "preferredDockedSize": { "width": 320, "height": 780 },
+      "preferredFloatingSize": { "width": 320, "height": 820 }
     }
   ],
   "requiredPermissions": {

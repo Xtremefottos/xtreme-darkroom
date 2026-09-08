@@ -14,12 +14,315 @@
     </div>
   </header>
 
-  <div id="app" class="scroll"></div>
+  <div class="scroll">
+    <section class="block">
+      <span class="lbl">Perfil de sessão</span>
+      <div class="row" id="profiles">
+      <div class="chip active" data-profile="casamento">Casamento</div>
+      <div class="chip" data-profile="quinze">15 anos</div>
+      <div class="chip" data-profile="corporativo">Corporativo</div>
+      <div class="chip" data-profile="beauty">Beauty</div>
+      <div class="chip" data-profile="newborn">Newborn</div>
+      <div class="chip" data-profile="externa">Externa</div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="row between">
+        <span class="lbl">Intensidade</span>
+        <span class="val" id="intVal">50</span>
+      </div>
+      <input id="intensity" type="range" min="0" max="100" value="50" />
+    </section>
+
+    <section class="block">
+      <div class="primary" id="applyProfile">Aplicar perfil inteiro</div>
+      <div class="row actions">
+        <div class="ghost" id="runBatch">Lote (6)</div>
+      </div>
+      <p class="hint">Checkbox = lote. Aplicar = foto atual. Um undo por ação.</p>
+    </section>
+
+    <div class="sec-head" data-section="rapidos">
+      <span class="lbl">Rápidos</span>
+      <div class="link" data-lote-sec="rapidos">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="skinHeal" />
+      <span class="name">Pele</span>
+      <div class="xt-btn apply" data-recipe="skinHeal">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="freqSep" checked />
+      <span class="name">Frequência</span>
+      <div class="xt-btn apply" data-recipe="freqSep">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="dodgeBurn" />
+      <span class="name">D&B</span>
+      <div class="xt-btn apply" data-recipe="dodgeBurn">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="eyes" />
+      <span class="name">Olhos</span>
+      <div class="xt-btn apply" data-recipe="eyes">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="teeth" />
+      <span class="name">Dentes</span>
+      <div class="xt-btn apply" data-recipe="teeth">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="grade" />
+      <span class="name">Cor</span>
+      <div class="xt-btn apply" data-recipe="grade">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="estudio">
+      <span class="lbl">Estúdio</span>
+      <div class="link" data-lote-sec="estudio">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="pelePerfeita" checked />
+      <span class="name">Pele perfeita</span>
+      <div class="xt-btn apply" data-recipe="pelePerfeita">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="mesclagem" />
+      <span class="name">Mesclagem</span>
+      <div class="xt-btn apply" data-recipe="mesclagem">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="copiarCores" />
+      <span class="name">Copiar cores</span>
+      <div class="xt-btn apply" data-recipe="copiarCores">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="limparFundo" />
+      <span class="name">Limpar fundo de estúdio</span>
+      <div class="xt-btn apply" data-recipe="limparFundo">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="limparFundoExterna" />
+      <span class="name">Limpar fundo externa</span>
+      <div class="xt-btn apply" data-recipe="limparFundoExterna">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="colorirFundo" />
+      <span class="name">Colorir fundo de estúdio</span>
+      <div class="xt-btn apply" data-recipe="colorirFundo">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="pele">
+      <span class="lbl">Pele</span>
+      <div class="link" data-lote-sec="pele">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="texturaPele" />
+      <span class="name">Textura de pele</span>
+      <div class="xt-btn apply" data-recipe="texturaPele">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="remManchas" />
+      <span class="name">Rem. manchas</span>
+      <div class="xt-btn apply" data-recipe="remManchas">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="freqSep" checked />
+      <span class="name">Frequência</span>
+      <div class="xt-btn apply" data-recipe="freqSep">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="peleDoBruxo" />
+      <span class="name">Pele do Bruxo</span>
+      <div class="xt-btn apply" data-recipe="peleDoBruxo">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="glamourGlow" />
+      <span class="name">Glamour glow</span>
+      <div class="xt-btn apply" data-recipe="glamourGlow">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="tomPele" />
+      <span class="name">Tom de pele</span>
+      <div class="xt-btn apply" data-recipe="tomPele">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="remCabeloRosto" />
+      <span class="name">Remover cabelo do rosto</span>
+      <div class="xt-btn apply" data-recipe="remCabeloRosto">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="db">
+      <span class="lbl">Dodge and burn</span>
+      <div class="link" data-lote-sec="db">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="checkLayer" />
+      <span class="name">Check layer</span>
+      <div class="xt-btn apply" data-recipe="checkLayer">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="solarCurve" />
+      <span class="name">Solar curve</span>
+      <div class="xt-btn apply" data-recipe="solarCurve">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="dbCurvas" />
+      <span class="name">DB curvas</span>
+      <div class="xt-btn apply" data-recipe="dbCurvas">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="dodge" checked />
+      <span class="name">Dodge</span>
+      <div class="xt-btn apply" data-recipe="dodge">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="burn" />
+      <span class="name">Burn</span>
+      <div class="xt-btn apply" data-recipe="burn">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="olhos">
+      <span class="lbl">Olhos</span>
+      <div class="link" data-lote-sec="olhos">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="olhosTrocarCor" />
+      <span class="name">Trocar cor</span>
+      <div class="xt-btn apply" data-recipe="olhosTrocarCor">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="olhosMagicos" checked />
+      <span class="name">Olhos mágicos</span>
+      <div class="xt-btn apply" data-recipe="olhosMagicos">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="dbOlhos" />
+      <span class="name">DB olhos</span>
+      <div class="xt-btn apply" data-recipe="dbOlhos">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="olhosNitidez" />
+      <span class="name">Nitidez</span>
+      <div class="xt-btn apply" data-recipe="olhosNitidez">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="olhosContorno" />
+      <span class="name">Contorno</span>
+      <div class="xt-btn apply" data-recipe="olhosContorno">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="boca">
+      <span class="lbl">Batom e dentes</span>
+      <div class="link" data-lote-sec="boca">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="dentesBrancos" checked />
+      <span class="name">Dentes brancos</span>
+      <div class="xt-btn apply" data-recipe="dentesBrancos">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="batom" />
+      <span class="name">Batom</span>
+      <div class="xt-btn apply" data-recipe="batom">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="batomTrocarCor" />
+      <span class="name">Trocar cor</span>
+      <div class="xt-btn apply" data-recipe="batomTrocarCor">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="volumeBatom" />
+      <span class="name">Volume do batom</span>
+      <div class="xt-btn apply" data-recipe="volumeBatom">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="detalhes">
+      <span class="lbl">Detalhes</span>
+      <div class="link" data-lote-sec="detalhes">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="extratorDetalhes" />
+      <span class="name">Extrator de detalhes</span>
+      <div class="xt-btn apply" data-recipe="extratorDetalhes">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="grao" />
+      <span class="name">Grão</span>
+      <div class="xt-btn apply" data-recipe="grao">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="nitidez12" />
+      <span class="name">Nitidez 1.2</span>
+      <div class="xt-btn apply" data-recipe="nitidez12">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="superNitidez" />
+      <span class="name">Super nitidez</span>
+      <div class="xt-btn apply" data-recipe="superNitidez">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="desfoque">
+      <span class="lbl">Desfoque</span>
+      <div class="link" data-lote-sec="desfoque">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="desfoque" />
+      <span class="name">Desfoque</span>
+      <div class="xt-btn apply" data-recipe="desfoque">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="destaque" />
+      <span class="name">Destaque</span>
+      <div class="xt-btn apply" data-recipe="destaque">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="final">
+      <span class="lbl">Finalização</span>
+      <div class="link" data-lote-sec="final">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="contrasteFundo" />
+      <span class="name">Contraste de fundo</span>
+      <div class="xt-btn apply" data-recipe="contrasteFundo">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="corIndireta" />
+      <span class="name">Cor indireta</span>
+      <div class="xt-btn apply" data-recipe="corIndireta">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="escurecer" />
+      <span class="name">Escurecer</span>
+      <div class="xt-btn apply" data-recipe="escurecer">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="luzBaixa" />
+      <span class="name">Luz baixa</span>
+      <div class="xt-btn apply" data-recipe="luzBaixa">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="contrasteFinal" checked />
+      <span class="name">Contraste final</span>
+      <div class="xt-btn apply" data-recipe="contrasteFinal">Aplicar</div>
+    </div>
+    <div class="sec-head" data-section="salvar">
+      <span class="lbl">Salvamento</span>
+      <div class="link" data-lote-sec="salvar">Lote seção</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="salvarFoto" />
+      <span class="name">Salvar foto</span>
+      <div class="xt-btn apply" data-recipe="salvarFoto">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="salvarComo" />
+      <span class="name">Salvar como</span>
+      <div class="xt-btn apply" data-recipe="salvarComo">Aplicar</div>
+    </div>
+    <div class="tool">
+      <input class="check" type="checkbox" data-lote="salvarInternet" />
+      <span class="name">Salvar para internet</span>
+      <div class="xt-btn apply" data-recipe="salvarInternet">Aplicar</div>
+    </div>
+  </div>
 
   <footer>
-    <span id="status">A carregar…</span>
+    <span id="status">Pronto · 46 funções</span>
   </footer>
-
   <script src="main.js"></script>
 </body>
 </html>

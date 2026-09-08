@@ -1,6 +1,5 @@
 (function () {
   const statusEl = document.getElementById("status");
-  const appRoot = document.getElementById("app");
 
   function setStatus(msg, isError) {
     statusEl.textContent = msg;
@@ -307,68 +306,76 @@
     }
   }
 
-  function el(tag, cls, text) {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text) n.textContent = text;
+  function loteCount() {
+    var n = 0;
+    document.querySelectorAll("[data-lote]").forEach(function (cb) {
+      if (cb.checked) n += 1;
+    });
     return n;
   }
 
-  function loteN() {
-    return Object.keys(state.batch).filter(function (k) { return state.batch[k]; }).length;
+  function refreshLote() {
+    var el = document.getElementById("runBatch");
+    if (el) el.textContent = "Lote (" + loteCount() + ")";
   }
 
-  function mount() {
-    while (appRoot.firstChild) appRoot.removeChild(appRoot.firstChild);
-
-    const profiles = el("section", "block");
-    profiles.appendChild(el("span", "lbl", "Perfil de sessão"));
-    const prow = el("div", "row");
-    Object.keys(PROFILES).forEach(function (id) {
-      const b = el("div", "chip" + (id === state.profile ? " active" : ""), PROFILES[id].label);
-      b.setAttribute("role", "button");
-      b.addEventListener("click", function () {
-        state.profile = id;
-        mount();
+  function bind() {
+    document.querySelectorAll("[data-profile]").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        state.profile = chip.getAttribute("data-profile");
+        document.querySelectorAll("[data-profile]").forEach(function (c) {
+          c.className = c.getAttribute("data-profile") === state.profile ? "chip active" : "chip";
+        });
       });
-      prow.appendChild(b);
     });
-    profiles.appendChild(prow);
-    appRoot.appendChild(profiles);
 
-    const intens = el("section", "block");
-    const ir = el("div", "row between");
-    ir.appendChild(el("span", "lbl", "Intensidade"));
-    const ival = el("span", "val", String(state.intensity));
-    ir.appendChild(ival);
-    intens.appendChild(ir);
-    const range = document.createElement("input");
-    range.type = "range";
-    range.min = "0";
-    range.max = "100";
-    range.value = String(state.intensity);
-    range.addEventListener("input", function (e) {
-      state.intensity = Number(e.target.value);
-      ival.textContent = String(state.intensity);
+    var range = document.getElementById("intensity");
+    if (range) {
+      range.addEventListener("input", function (e) {
+        state.intensity = Number(e.target.value);
+        document.getElementById("intVal").textContent = String(state.intensity);
+      });
+    }
+
+    document.querySelectorAll("[data-recipe]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        runAtom(btn.getAttribute("data-recipe"));
+      });
     });
-    intens.appendChild(range);
-    appRoot.appendChild(intens);
 
-    const actions = el("section", "block");
-    const apply = el("div", "primary", "Aplicar perfil inteiro");
-    apply.setAttribute("role", "button");
-    apply.addEventListener("click", function () {
-      const p = PROFILES[state.profile];
+    document.querySelectorAll("[data-lote]").forEach(function (cb) {
+      cb.addEventListener("change", refreshLote);
+    });
+
+    document.querySelectorAll("[data-lote-sec]").forEach(function (tog) {
+      tog.addEventListener("click", function () {
+        var sec = tog.parentElement.nextElementSibling;
+        var boxes = [];
+        var node = tog.parentElement.nextElementSibling;
+        while (node && node.className === "tool") {
+          var input = node.querySelector("[data-lote]");
+          if (input) boxes.push(input);
+          node = node.nextElementSibling;
+        }
+        var allOn = boxes.length && boxes.every(function (b) { return b.checked; });
+        boxes.forEach(function (b) { b.checked = !allOn; });
+        tog.textContent = !allOn ? "Lote off" : "Lote seção";
+        refreshLote();
+      });
+    });
+
+    document.getElementById("applyProfile").addEventListener("click", function () {
+      var p = PROFILES[state.profile];
       runStack(p.label, p.stack);
     });
-    actions.appendChild(apply);
-    const row2 = el("div", "row");
-    row2.style.marginTop = "6px";
-    const lote = el("div", "ghost", "Lote (" + loteN() + ")");
-    lote.setAttribute("role", "button");
-    lote.addEventListener("click", function () {
-      const stack = ATOMS.filter(function (a) { return state.batch[a.key] && !a.exportKind; }).map(function (a) {
-        return [a.key, state.intensity];
+
+    document.getElementById("runBatch").addEventListener("click", function () {
+      var stack = [];
+      document.querySelectorAll("[data-lote]").forEach(function (cb) {
+        if (!cb.checked) return;
+        var key = cb.getAttribute("data-lote");
+        if (ATOM[key] && ATOM[key].exportKind) return;
+        stack.push([key, state.intensity]);
       });
       if (!stack.length) {
         setStatus("Marque funções no lote", true);
@@ -376,50 +383,14 @@
       }
       runStack("Lote", stack);
     });
-    row2.appendChild(lote);
-    actions.appendChild(row2);
-    actions.appendChild(el("p", "hint", "Checkbox = lote. Aplicar = foto atual. Um undo por ação."));
-    appRoot.appendChild(actions);
 
-    SECTIONS.forEach(function (sec) {
-      const head = el("div", "sec-head");
-      head.appendChild(el("span", "lbl", sec.label));
-      const allOn = sec.keys.every(function (k) { return state.batch[k]; });
-      const tog = el("div", "link", allOn ? "Lote off" : "Lote seção");
-      tog.addEventListener("click", function () {
-        sec.keys.forEach(function (k) { state.batch[k] = !allOn; });
-        mount();
-      });
-      head.appendChild(tog);
-      appRoot.appendChild(head);
-
-      sec.keys.forEach(function (key) {
-        const a = ATOM[key];
-        const row = el("div", "tool");
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.className = "check";
-        cb.checked = !!state.batch[key];
-        cb.addEventListener("change", function () {
-          state.batch[key] = cb.checked;
-          mount();
-        });
-        row.appendChild(cb);
-        row.appendChild(el("span", "name", a.label));
-        const btn = el("div", "xt-btn apply", "Aplicar");
-        btn.setAttribute("role", "button");
-        btn.addEventListener("click", function () { runAtom(key); });
-        row.appendChild(btn);
-        appRoot.appendChild(row);
-      });
-    });
-
+    refreshLote();
     setStatus("Pronto · " + ATOMS.length + " funções");
   }
 
   try {
-    mount();
+    bind();
   } catch (err) {
-    setStatus("Falha ao montar UI: " + err.message, true);
+    setStatus("Falha ao ligar UI: " + err.message, true);
   }
 })();
