@@ -1,10 +1,14 @@
 (function () {
   var statusEl = document.getElementById("status");
   function setStatus(msg, isError) {
-    statusEl.textContent = msg;
-    statusEl.parentElement.classList.toggle("error", !!isError);
+    if (!statusEl) return;
+    try {
+      statusEl.textContent = msg;
+      if (statusEl.parentElement) statusEl.parentElement.classList.toggle("error", !!isError);
+    } catch (e) {}
   }
 
+  function start() {
   var photoshop;
   try {
     photoshop = require("photoshop");
@@ -16,7 +20,8 @@
   var core = photoshop.core;
   var action = photoshop.action;
   var app = photoshop.app;
-  var constants = photoshop.constants;
+  var constants = null;
+  try { constants = photoshop.constants; } catch (e) {}
   var uxp = require("uxp");
 
   var state = { profile: "casamento", intensity: 50 };
@@ -1044,4 +1049,7 @@
   }
 
   try { bind(); } catch (err) { setStatus("Falha ao ligar UI: " + err.message, true); }
+  }
+
+  setTimeout(start, 0);
 })();
