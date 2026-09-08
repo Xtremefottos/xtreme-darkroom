@@ -157,33 +157,137 @@
     }
   }
 
-  async function selectSkin() {
+  async function hasSelection() {
+    try {
+      var r = await bp([{
+        _obj: "get",
+        _target: [
+          { _property: "selection" },
+          { _ref: "document", _enum: "ordinal", _value: "targetEnum" }
+        ]
+      }]);
+      return !!(r && r[0] && (r[0].selection || r[0].left != null));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function selectPeopleAI(tags) {
+    var attempts = [];
+    if (tags && tags.length) {
+      attempts.push({
+        _obj: "selectPeopleV2",
+        selectAllPeople: true,
+        tagsV2: tags,
+        _options: { dialogOptions: "dontDisplay" }
+      });
+      attempts.push({
+        _obj: "selectPeopleV2",
+        selectAllPeople: true,
+        tagsV2: tags,
+        tagsIndices: [],
+        _options: { dialogOptions: "dontDisplay" }
+      });
+    } else {
+      attempts.push({
+        _obj: "selectPeopleV2",
+        selectAllPeople: true,
+        _options: { dialogOptions: "dontDisplay" }
+      });
+    }
+    for (var n = 0; n < attempts.length; n++) {
+      try {
+        await bp([attempts[n]]);
+        if (await hasSelection()) return true;
+      } catch (e) {}
+    }
+    if (tags && tags.length > 1) {
+      for (var t = 0; t < tags.length; t++) {
+        try {
+          await bp([{
+            _obj: "selectPeopleV2",
+            selectAllPeople: true,
+            tagsV2: [tags[t]],
+            _options: { dialogOptions: "dontDisplay" }
+          }]);
+          if (await hasSelection()) return true;
+        } catch (e) {}
+      }
+    }
+    return false;
+  }
+
+  async function selectSkyAI() {
+    try {
+      await bp([{ _obj: "selectSky", sampleAllLayers: true, _options: { dialogOptions: "dontDisplay" } }]);
+      if (await hasSelection()) return true;
+    } catch (e) {}
     try {
       await bp([{
-        _obj: "colorRange",
-        colors: { _enum: "colors", _value: "skinTones" },
-        fuzziness: 80
+        _obj: "select",
+        _target: [{ _ref: "menuItemClass", _enum: "menuItemType", _value: "selectSky" }],
+        _options: { dialogOptions: "dontDisplay" }
       }]);
-    } catch (e) {
-      await selectSubject();
+      if (await hasSelection()) return true;
+    } catch (e) {}
+    return false;
+  }
+
+  var PEOPLE_TAGS = {
+    skin: ["Facial skin", "Upper body skin", "Face Skin", "Skin"],
+    eyes: ["Eyes", "Iris", "Eye"],
+    teeth: ["Teeth"],
+    lips: ["Lips", "Mouth", "Lip"],
+    hair: ["Hair"],
+    brows: ["Eyebrows", "Eyebrow"]
+  };
+
+  async function selectAI(kind) {
+    try { await deselect(); } catch (e) {}
+    if (kind === "sky") return await selectSkyAI();
+    if (kind === "background") {
+      if (await selectAI("subject")) {
+        await invertSel();
+        try { await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
+        return true;
+      }
+      return false;
     }
+    if (kind === "subject") {
+      if (await selectPeopleAI(null)) return true;
+      await selectSubject();
+      return await hasSelection();
+    }
+    var tags = PEOPLE_TAGS[kind];
+    if (tags && await selectPeopleAI(tags)) return true;
+    if (kind === "skin") {
+      try {
+        await bp([{
+          _obj: "colorRange",
+          colors: { _enum: "colors", _value: "skinTones" },
+          fuzziness: 80
+        }]);
+        if (await hasSelection()) return true;
+      } catch (e) {}
+    }
+    await selectSubject();
+    return await hasSelection();
   }
 
   async function finishMask(kind) {
     try {
-      if (kind === "skin") await selectSkin();
-      else if (kind === "subject") await selectSubject();
-      else if (kind === "background") {
-        await selectSubject();
-        await invertSel();
-        try { await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
-      } else {
+      if (!kind || kind === "reveal") {
         await addMask("reveal");
         try { await deselect(); } catch (e) {}
         return;
       }
-      try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 6 } }]); } catch (e) {}
-      await addMask("selection");
+      var ok = await selectAI(kind);
+      if (ok) {
+        try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
+        await addMask("selection");
+      } else {
+        await addMask("reveal");
+      }
     } catch (e) {
       await addMask("reveal");
     }
@@ -289,7 +393,8 @@
     }]);
   }
 
-  async function adjVibrance(i, name) {
+  async function adjVibrance(i, name, maskKind) {
+    if (maskKind && maskKind !== "reveal") await selectAI(maskKind);
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -299,9 +404,11 @@
         name: name || "XT · Vibrance"
       }
     }]);
+    try { await deselect(); } catch (e) {}
   }
 
-  async function adjWarm(i) {
+  async function adjWarm(i, maskKind) {
+    if (maskKind && maskKind !== "reveal") await selectAI(maskKind);
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -316,9 +423,12 @@
         name: "XT · Tom quente"
       }
     }]);
+    try { await deselect(); } catch (e) {}
   }
 
-  async function adjCurvesUp(name) {
+  async function adjCurvesUp(name, maskKind) {
+    await selectAI(maskKind || "skin");
+    try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -340,10 +450,12 @@
         name: name
       }
     }]);
-    try { await bp([{ _obj: "invert" }]); } catch (e) {}
+    try { await deselect(); } catch (e) {}
   }
 
-  async function adjCurvesDown(name) {
+  async function adjCurvesDown(name, maskKind) {
+    await selectAI(maskKind || "skin");
+    try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -365,7 +477,7 @@
         name: name
       }
     }]);
-    try { await bp([{ _obj: "invert" }]); } catch (e) {}
+    try { await deselect(); } catch (e) {}
   }
 
   async function freqSep(doc, radius) {
@@ -537,12 +649,16 @@
         await grayDB(doc, "XT · D&B", i);
         return;
       case "dodge":
+        await adjCurvesUp("XT · Dodge", "skin");
+        return;
       case "dbOlhos":
-        await adjCurvesUp("XT · Dodge");
+        await adjCurvesUp("XT · Dodge", "eyes");
         return;
       case "burn":
+        await adjCurvesDown("XT · Burn", "skin");
+        return;
       case "olhosContorno":
-        await adjCurvesDown("XT · Burn");
+        await adjCurvesDown("XT · Burn", "eyes");
         return;
       case "dbCurvas":
         await adjCurvesUp("XT · Dodge");
@@ -555,12 +671,12 @@
         await unsharp(o, lerp(i, 40, 90), 1.3);
         await setBlend(o, "softLight");
         o.opacity = lerp(i, 22, 50);
-        await finishMask("subject");
+        await finishMask("eyes");
         return;
       }
       case "teeth":
       case "dentesBrancos":
-        await selectSubject();
+        await selectAI("teeth");
         await bp([{
           _obj: "make",
           _target: [{ _ref: "adjustmentLayer" }],
@@ -609,7 +725,7 @@
       case "copiarCores":
       case "batom":
       case "volumeBatom":
-        await adjVibrance(i, "XT · " + ATOM[key].label, "subject");
+        await adjVibrance(i, "XT · " + ATOM[key].label, "lips");
         return;
       case "limparFundo":
         await bgClean(doc, i, "studio");
@@ -681,12 +797,28 @@
         if (typeof h.applyDustAndScratches === "function") await h.applyDustAndScratches(rnd(lerp(i, 2, 6)), 8);
         else await surface(h, lerp(i, 3, 8), 6);
         h.opacity = lerp(i, 20, 45);
-        await finishMask("skin");
+        await finishMask("hair");
         return;
       }
       case "olhosTrocarCor":
+        await selectAI("eyes");
+        await bp([{
+          _obj: "make",
+          _target: [{ _ref: "adjustmentLayer" }],
+          using: {
+            _obj: "adjustmentLayer",
+            type: {
+              _obj: "hueSaturation",
+              colorize: false,
+              adjustment: [{ _obj: "hueSatAdjustmentV2", hue: rnd(lerp(i, -24, 24)), saturation: 8 }]
+            },
+            name: "XT · Trocar cor"
+          }
+        }]);
+        try { await deselect(); } catch (e) {}
+        return;
       case "batomTrocarCor":
-        await selectSubject();
+        await selectAI("lips");
         await bp([{
           _obj: "make",
           _target: [{ _ref: "adjustmentLayer" }],
