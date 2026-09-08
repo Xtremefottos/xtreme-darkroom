@@ -264,10 +264,7 @@
     }]);
   }
 
-
-  async function adjVibrance(i, name, maskKind) {
-    if (maskKind === "skin") await selectSkin();
-    else if (maskKind === "subject") await selectSubject();
+  async function adjVibrance(i, name) {
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -277,16 +274,9 @@
         name: name || "XT · Vibrance"
       }
     }]);
-    try { await deselect(); } catch (e) {}
   }
 
-  async function adjWarm(i, maskKind) {
-    if (maskKind === "skin") await selectSkin();
-    else if (maskKind === "subject") await selectSubject();
-    else if (maskKind === "background") {
-      await selectSubject();
-      await invertSel();
-    }
+  async function adjWarm(i) {
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -301,12 +291,9 @@
         name: "XT · Tom quente"
       }
     }]);
-    try { await deselect(); } catch (e) {}
   }
 
   async function adjCurvesUp(name) {
-    await selectSubject();
-    try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 6 } }]); } catch (e) {}
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -328,12 +315,10 @@
         name: name
       }
     }]);
-    try { await deselect(); } catch (e) {}
+    try { await bp([{ _obj: "invert" }]); } catch (e) {}
   }
 
   async function adjCurvesDown(name) {
-    await selectSubject();
-    try { await bp([{ _obj: "feather", radius: { _unit: "pixelsUnit", _value: 6 } }]); } catch (e) {}
     await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
@@ -355,7 +340,7 @@
         name: name
       }
     }]);
-    try { await deselect(); } catch (e) {}
+    try { await bp([{ _obj: "invert" }]); } catch (e) {}
   }
 
   async function freqSep(doc, radius) {
@@ -390,7 +375,7 @@
         };
     await bp([apply]);
     await setBlend(doc.activeLayers[0], "linearLight");
-    await finishMask("skin");
+    await addMask("reveal");
   }
 
   async function neuralSkin(doc, i) {
@@ -415,42 +400,31 @@
       await surface(layer, lerp(i, 10, 24), rnd(lerp(i, 8, 18)));
     }
     layer.opacity = lerp(i, 55, 85);
-    await finishMask("skin");
   }
 
-  async function grayDB(doc, name, i) {
-    var layer = await stamp(doc, name);
-    await bp([{
-      _obj: "shadowHighlight",
-      shadowAmount: rnd(lerp(i || 50, 10, 24)),
-      shadowWidth: 50,
-      shadowRadius: 30,
-      highlightAmount: rnd(lerp(i || 50, 6, 16)),
-      highlightWidth: 50,
-      highlightRadius: 30,
-      colorCorrection: 12,
-      midtoneContrast: rnd(lerp(i || 50, 4, 10)),
-      blackClip: 0.01,
-      whiteClip: 0.01
-    }]);
+  async function grayDB(doc, name) {
+    await bp([{ _obj: "make", _target: [{ _ref: "layer" }] }]);
+    var layer = doc.activeLayers[0];
+    layer.name = name;
+    await fillGray();
     await setBlend(layer, "softLight");
-    layer.opacity = lerp(i || 50, 45, 80);
-    await finishMask("subject");
+    await addMask("reveal");
     return layer;
   }
 
   async function bgClean(doc, i, mode) {
-    var layer = await stamp(doc, mode === "externa" ? "XT · Fundo externa" : "XT · Fundo limpo");
+    var layer = await stamp(doc, mode === "externa" ? "XT · Fundo externa" : "XT · Fundo limpo", "none");
+    await selectSubject();
+    await invertSel();
+    try {
+      await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: 4 } }]);
+    } catch (e) {}
     if (mode === "externa") {
       await gauss(layer, lerp(i, 12, 30));
       layer.opacity = lerp(i, 60, 90);
-      await finishMask("background");
     } else if (mode === "color") {
-      await adjWarm(Math.min(100, i + 20), "background");
+      await adjWarm(Math.min(100, i + 20));
     } else {
-      await selectSubject();
-      await invertSel();
-      try { await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: 4 } }]); } catch (e) {}
       try {
         await bp([{
           _obj: "fill",
@@ -461,9 +435,10 @@
       } catch (e) {
         await gauss(layer, lerp(i, 4, 12));
       }
-      await addMask("selection");
-      try { await deselect(); } catch (e) {}
     }
+    await addMask("selection");
+    try { await deselect(); } catch (e) {}
+    await selectMask();
   }
 
   var ACR_LOOK = {

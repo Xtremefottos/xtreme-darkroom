@@ -113,14 +113,23 @@ h1 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
 }
 .hint { color: var(--muted); margin: 8px 0 0; font-size: 11px; line-height: 1.4; }
 
+.sec { border-bottom: none; }
 .sec-head {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
   align-items: center;
   padding: 10px 12px 4px;
+  cursor: pointer;
 }
-.sec-head .lbl { margin: 0; }
+.sec-head .lbl { margin: 0; flex: 1; }
+.chev {
+  width: 14px;
+  margin-right: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.sec.closed .sec-body { display: none; }
+.sec.open .sec-body { display: block; }
 .link {
   height: 28px;
   margin: 0;
@@ -130,6 +139,7 @@ h1 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 10px;
+  padding: 0;
 }
 
 .tool {
