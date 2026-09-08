@@ -3,13 +3,13 @@ Photoshop 24.2 ou mais novo.
 
 1. PREPARAR
 - Creative Cloud atualizado, Photoshop 24.2+.
-- Instalar UXP Developer Tools no Creative Cloud.
+- Instalar "UXP Developer Tools" no Creative Cloud.
 - Abrir o UDT e marcar Enable Developer Mode.
 - Photoshop > Editar > Preferencias > Plug-ins > Ativar modo do desenvolvedor.
 
 2. EXTRAIR
-- Extraia o zip do GitHub (Code > Download ZIP).
-- A pasta tem de conter manifest.json.
+- Extraia este pacote para Documentos\xtreme-darkroom
+- Tem que existir manifest.json nesta pasta.
 - Nao carregue o arquivo .zip no UDT.
 
 3. LOAD
@@ -17,3 +17,23 @@ Photoshop 24.2 ou mais novo.
 - Add Plugin > selecione manifest.json
 - ... > Load
 - Photoshop: Plug-ins > Paineis de plug-ins > Xtreme Darkroom
+- Docke a direita.
+
+4. TESTE
+- Abra um retrato (JPG/PSD).
+- Intensidade 50 > botao Pele.
+- Camadas: grupo "XT · Pele". Sem flatten.
+- Historico: um passo "Xtreme · …". Ctrl+Z remove o grupo.
+- Perfil Casamento > Aplicar perfil inteiro.
+- Varios grupos XT, um so passo no Historico. Ctrl+Z desfaz o perfil todo.
+
+5. ATUALIZAR (se o painel ja estava instalado)
+- UXP Developer Tool > ... > Unload
+- Substitua a pasta xtreme-darkroom pela extraida deste zip
+- ... > Load  (ou Reload)
+- No Photoshop o catalogo tem de aparecer: Rápidos, Estudio, Pele, D&B, Olhos, Batom, Detalhes, Desfoque, Finalizacao, Salvamento.
+
+- Load vermelho: escolheu o zip em vez do manifest.json.
+- "Abra um documento": nao ha arquivo aberto.
+- Painel sumiu: Plug-ins > Paineis de plug-ins.
+- Load recusa: Developer Mode desmarcado. Marque e reabra o UDT.
