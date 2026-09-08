@@ -694,50 +694,99 @@
   }
 
   async function runLook() {
+    var keys = selectedKeys();
+    if (!keys.length) {
+      setStatus("Marque as funções no plugin", true);
+      return;
+    }
     try {
-      var p = PROFILES[state.profile];
-      setStatus("Deixando pronta · " + p.label + "…");
-      await runModal("Xtreme · " + p.label, async function (doc) {
-        await look(doc, state.profile, state.intensity);
+      setStatus("Foto atual · " + keys.length + " funções…");
+      await runModal("Xtreme · Foto pronta", async function (doc) {
+        await applyKeysToDoc(doc, keys, state.intensity);
       });
-      setStatus(p.label + " · foto pronta · um undo");
+      setStatus("Foto pronta · " + keys.length + " · um undo");
     } catch (err) {
       setStatus(err.message || String(err), true);
     }
   }
 
-  function loteCount() {
-    var n = 0;
-    document.querySelectorAll("[data-lote]").forEach(function (cb) { if (cb.checked) n += 1; });
-    return n;
-  }
-  function refreshLote() {
-    var el = document.getElementById("runBatch");
-    if (el) el.textContent = "Lote (" + loteCount() + ")";
-  }
-
-  async function runLote() {
+  function selectedKeys() {
+    var seen = {};
     var keys = [];
     document.querySelectorAll("[data-lote]").forEach(function (cb) {
       if (!cb.checked) return;
       var key = cb.getAttribute("data-lote");
+      if (!key || seen[key]) return;
       if (ATOM[key] && ATOM[key].exportKind) return;
+      seen[key] = true;
       keys.push(key);
     });
+    return keys;
+  }
+
+  async function applyKeysToDoc(doc, keys, intensity) {
+    for (var n = 0; n < keys.length; n++) {
+      await runKey(doc, keys[n], intensity);
+    }
+  }
+
+  function listDocs() {
+    var docs = [];
+    for (var i = 0; i < app.documents.length; i++) docs.push(app.documents[i]);
+    return docs;
+  }
+
+  async function activateDoc(doc) {
+    try {
+      app.activeDocument = doc;
+    } catch (e) {
+      await bp([{ _obj: "select", _target: [{ _ref: "document", _id: doc.id }] }]);
+    }
+  }
+
+  function loteCount() {
+    return selectedKeys().length;
+  }
+  function refreshLote() {
+    var el = document.getElementById("runBatch");
+    if (el) el.textContent = "Lote todas (" + loteCount() + ")";
+  }
+
+  async function runLote() {
+    var keys = selectedKeys();
     if (!keys.length) {
-      await runLook();
+      setStatus("Marque as funções no plugin", true);
       return;
     }
+    if (!app.documents.length) {
+      setStatus("Abra as fotos no Photoshop", true);
+      return;
+    }
+    var docs = listDocs();
     try {
-      setStatus("Lote · " + keys.length + " funções…");
-      await runModal("Xtreme · Lote", async function (doc) {
-        await look(doc, state.profile, state.intensity);
-        var extras = ["limparFundoExterna", "limparFundo", "grao", "glamourGlow", "superNitidez"];
-        for (var n = 0; n < extras.length; n++) {
-          if (keys.indexOf(extras[n]) >= 0) await runKey(doc, extras[n], state.intensity);
+      setStatus("Lote · " + docs.length + " fotos…");
+      await core.executeAsModal(async function (ctx) {
+        var ok = 0;
+        var fail = 0;
+        for (var n = 0; n < docs.length; n++) {
+          var doc = docs[n];
+          setStatus("Lote " + (n + 1) + "/" + docs.length + " · " + (doc.title || doc.name || "foto"));
+          await activateDoc(doc);
+          var token = await ctx.hostControl.suspendHistory({
+            documentID: doc.id,
+            name: "Xtreme · Lote"
+          });
+          try {
+            await applyKeysToDoc(doc, keys, state.intensity);
+            ok += 1;
+          } catch (e) {
+            fail += 1;
+          } finally {
+            await ctx.hostControl.resumeHistory(token);
+          }
         }
-      });
-      setStatus("Lote pronto · um undo");
+        setStatus("Lote · " + ok + " fotos" + (fail ? " · " + fail + " falhas" : "") + " · um undo cada");
+      }, { commandName: "Xtreme · Lote todas" });
     } catch (err) {
       setStatus(err.message || String(err), true);
     }
