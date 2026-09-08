@@ -81,6 +81,31 @@
     externa: { label: "Externa" }
   };
 
+  var CLASS_KEYS = {
+    casamento: ["pelePerfeita", "freqSep", "dodge", "olhosMagicos", "dentesBrancos", "contrasteFinal", "limparFundo", "tomPele"],
+    quinze: ["pelePerfeita", "glamourGlow", "olhosMagicos", "dentesBrancos", "batom", "contrasteFinal", "nitidez12"],
+    corporativo: ["remManchas", "freqSep", "eyes", "contrasteFinal", "limparFundo", "nitidez12"],
+    beauty: ["peleDoBruxo", "freqSep", "glamourGlow", "olhosMagicos", "dentesBrancos", "batom", "contrasteFinal"],
+    newborn: ["skinHeal", "tomPele", "glamourGlow", "contrasteFinal"],
+    externa: ["pelePerfeita", "olhosMagicos", "nitidez12", "limparFundoExterna", "desfoque", "contrasteFinal"]
+  };
+
+  function applyClass(id) {
+    if (!PROFILES[id]) return;
+    state.profile = id;
+    var keys = CLASS_KEYS[id] || [];
+    var set = {};
+    keys.forEach(function (k) { set[k] = true; });
+    document.querySelectorAll("[data-lote]").forEach(function (cb) {
+      cb.checked = !!set[cb.getAttribute("data-lote")];
+    });
+    document.querySelectorAll("[data-profile]").forEach(function (c) {
+      c.className = c.getAttribute("data-profile") === id ? "chip active" : "chip";
+    });
+    refreshLote();
+    setStatus(PROFILES[id].label + " · " + keys.length + " funções");
+  }
+
   function t(i) { return i / 100; }
   function lerp(i, a, b) { return a + (b - a) * t(i); }
   function rnd(n) { return Math.round(n); }
@@ -820,10 +845,7 @@
   function bind() {
     document.querySelectorAll("[data-profile]").forEach(function (chip) {
       chip.addEventListener("click", function () {
-        state.profile = chip.getAttribute("data-profile");
-        document.querySelectorAll("[data-profile]").forEach(function (c) {
-          c.className = c.getAttribute("data-profile") === state.profile ? "chip active" : "chip";
-        });
+        applyClass(chip.getAttribute("data-profile"));
       });
     });
     var range = document.getElementById("intensity");
@@ -886,8 +908,7 @@
     });
     document.getElementById("applyProfile").addEventListener("click", function () { runLook(); });
     document.getElementById("runBatch").addEventListener("click", function () { runLote(); });
-    refreshLote();
-    setStatus("Pronto · máscaras em todas as camadas");
+    applyClass(state.profile);
   }
 
   try { bind(); } catch (err) { setStatus("Falha ao ligar UI: " + err.message, true); }
