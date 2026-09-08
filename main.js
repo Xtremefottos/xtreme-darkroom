@@ -564,22 +564,255 @@
 
   async function acr(i, extra) {
     extra = extra || {};
+    function pack(ver, pv) {
+      var cr = extra.cr != null ? extra.cr : rnd(lerp(i, 8, 20));
+      var te = extra.te != null ? extra.te : rnd(lerp(i, 4, 14));
+      var st = extra.st != null ? extra.st : rnd(lerp(i, 2, 8));
+      var ti = extra.ti != null ? extra.ti : rnd(lerp(i, 2, 8));
+      return {
+        _obj: "Adobe Camera Raw Filter",
+        "$CrVe": ver,
+        "$PrVN": pv,
+        "$PrVe": 184549376,
+        "$Ex12": extra.ex != null ? extra.ex : lerp(i, 0.04, 0.2),
+        "$Cn12": cr,
+        "$Cr12": cr,
+        "$Hi12": extra.hi != null ? extra.hi : rnd(lerp(i, -18, -34)),
+        "$Sh12": extra.sh != null ? extra.sh : rnd(lerp(i, 12, 28)),
+        "$Wh12": extra.wh != null ? extra.wh : rnd(lerp(i, 4, 14)),
+        "$Bk12": extra.bk != null ? extra.bk : rnd(lerp(i, -8, -16)),
+        "$Te12": te,
+        "$Temp": te,
+        "$Tt12": ti,
+        "$Tint": ti,
+        "$Tx12": extra.tx != null ? extra.tx : rnd(lerp(i, 4, 14)),
+        "$Cl12": extra.cl != null ? extra.cl : rnd(lerp(i, -10, -24)),
+        "$Dh12": extra.dh != null ? extra.dh : rnd(lerp(i, 1, 6)),
+        "$Vibr": extra.vi != null ? extra.vi : rnd(lerp(i, 10, 22)),
+        "$Strt": st,
+        "$Sa12": st,
+        "$Shrp": extra.shp != null ? extra.shp : rnd(lerp(i, 18, 36)),
+        "$ShpR": 1,
+        "$ShpD": 25,
+        "$LNR": rnd(lerp(i, 8, 22)),
+        "$CNR": rnd(lerp(i, 6, 16))
+      };
+    }
+    var r = await bp([pack("17.0", 6)]);
+    if (r) return r;
+    r = await bp([pack("16.0", 6)]);
+    if (r) return r;
+    return await bp([pack("15.4", 5)]);
+  }
+
+  async function toSmartObject() {
+    var r = await bp([{ _obj: "newPlacedLayer" }]);
+    return !!r;
+  }
+
+  async function makeLevels(i) {
     await bp([{
-      _obj: "Adobe Camera Raw Filter",
-      "$CrVe": "15.4",
-      "$PrVN": 5,
-      "$PrVe": 184549376,
-      "$Ex12": extra.ex != null ? extra.ex : 0.05 + t(i) * 0.12,
-      "$Cr12": extra.cr != null ? extra.cr : rnd(lerp(i, 8, 18)),
-      "$Hi12": extra.hi != null ? extra.hi : rnd(lerp(i, -16, -32)),
-      "$Sh12": extra.sh != null ? extra.sh : rnd(lerp(i, 12, 28)),
-      "$Wh12": extra.wh != null ? extra.wh : rnd(lerp(i, 4, 12)),
-      "$Bk12": extra.bk != null ? extra.bk : rnd(lerp(i, -6, -12)),
-      "$Cl12": extra.cl != null ? extra.cl : rnd(lerp(i, -8, -22)),
-      "$Vibr": extra.vi != null ? extra.vi : rnd(lerp(i, 8, 18)),
-      "$Strt": extra.st != null ? extra.st : rnd(lerp(i, 2, 6)),
-      "$Temp": extra.te != null ? extra.te : rnd(lerp(i, 4, 12))
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "levels",
+          presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+          adjustment: [{
+            _obj: "levelsAdjustment",
+            channel: { _ref: "channel", _enum: "channel", _value: "composite" },
+            input: [rnd(lerp(i, 6, 14)), lerp(i, 1.02, 1.06), rnd(lerp(i, 248, 242))]
+          }]
+        },
+        name: "XT · Níveis"
+      }
     }]);
+  }
+
+  async function makeExposure(i) {
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "exposure",
+          exposure: lerp(i, 0.04, 0.16),
+          offset: 0,
+          gammaCorrection: lerp(i, 1.0, 1.04)
+        },
+        name: "XT · Exposição"
+      }
+    }]);
+  }
+
+  async function makeCurvesGrade(i) {
+    var mid = rnd(lerp(i, 130, 138));
+    var sh = rnd(lerp(i, 58, 52));
+    var hi = rnd(lerp(i, 196, 206));
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "curves",
+          presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+          adjustment: [
+            {
+              _obj: "curvesAdjustment",
+              channel: { _ref: "channel", _enum: "channel", _value: "composite" },
+              curve: [
+                { _obj: "paint", horizontal: 0, vertical: 0 },
+                { _obj: "paint", horizontal: 64, vertical: sh },
+                { _obj: "paint", horizontal: 128, vertical: mid },
+                { _obj: "paint", horizontal: 192, vertical: hi },
+                { _obj: "paint", horizontal: 255, vertical: 255 }
+              ]
+            },
+            {
+              _obj: "curvesAdjustment",
+              channel: { _ref: "channel", _enum: "channel", _value: "red" },
+              curve: [
+                { _obj: "paint", horizontal: 0, vertical: 0 },
+                { _obj: "paint", horizontal: 128, vertical: rnd(lerp(i, 128, 134)) },
+                { _obj: "paint", horizontal: 255, vertical: 255 }
+              ]
+            },
+            {
+              _obj: "curvesAdjustment",
+              channel: { _ref: "channel", _enum: "channel", _value: "blue" },
+              curve: [
+                { _obj: "paint", horizontal: 0, vertical: rnd(lerp(i, 6, 12)) },
+                { _obj: "paint", horizontal: 255, vertical: rnd(lerp(i, 248, 242)) }
+              ]
+            }
+          ]
+        },
+        name: "XT · Curvas"
+      }
+    }]);
+  }
+
+  async function makeHueSat(i) {
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "hueSaturation",
+          presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+          colorize: false,
+          adjustment: [
+            { _obj: "hueSatAdjustmentV2", hue: 0, saturation: rnd(lerp(i, 2, 8)), lightness: 0 },
+            {
+              _obj: "hueSatAdjustmentV2",
+              localRange: 1,
+              beginRamp: 315, beginSustain: 345, endSustain: 15, endRamp: 45,
+              hue: rnd(lerp(i, -2, 3)),
+              saturation: rnd(lerp(i, -2, 8)),
+              lightness: rnd(lerp(i, 1, 4))
+            },
+            {
+              _obj: "hueSatAdjustmentV2",
+              localRange: 2,
+              beginRamp: 15, beginSustain: 45, endSustain: 75, endRamp: 105,
+              hue: 0,
+              saturation: rnd(lerp(i, -12, -4)),
+              lightness: 1
+            }
+          ]
+        },
+        name: "XT · Matiz/Saturação"
+      }
+    }]);
+  }
+
+  async function makeSelective(i) {
+    var y = rnd(lerp(i, 4, 10));
+    var k = rnd(lerp(i, 2, 6));
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "selectiveColor",
+          presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+          method: { _enum: "correctionMethod", _value: "relative" },
+          colorCorrection: [
+            {
+              _obj: "colorCorrection",
+              colors: { _enum: "colors", _value: "reds" },
+              magenta: { _unit: "percentUnit", _value: rnd(lerp(i, 2, 6)) },
+              yellowColor: { _unit: "percentUnit", _value: y },
+              black: { _unit: "percentUnit", _value: rnd(lerp(i, 1, 4)) }
+            },
+            {
+              _obj: "colorCorrection",
+              colors: { _enum: "colors", _value: "yellows" },
+              magenta: { _unit: "percentUnit", _value: 2 },
+              yellowColor: { _unit: "percentUnit", _value: rnd(lerp(i, -12, -4)) }
+            },
+            {
+              _obj: "colorCorrection",
+              colors: { _enum: "colors", _value: "neutrals" },
+              black: { _unit: "percentUnit", _value: k }
+            },
+            {
+              _obj: "colorCorrection",
+              colors: { _enum: "colors", _value: "whites" },
+              black: { _unit: "percentUnit", _value: rnd(lerp(i, -4, -1)) }
+            },
+            {
+              _obj: "colorCorrection",
+              colors: { _enum: "colors", _value: "blacks" },
+              black: { _unit: "percentUnit", _value: rnd(lerp(i, 2, 6)) }
+            }
+          ]
+        },
+        name: "XT · Cor seletiva"
+      }
+    }]);
+  }
+
+  async function makeBalance(i) {
+    var warm = rnd(lerp(i, 4, 12));
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "colorBalance",
+          shadowLevels: [0, 0, rnd(lerp(i, 3, 8))],
+          midtoneLevels: [rnd(lerp(i, 2, 6)), 0, -rnd(lerp(i, 1, 4))],
+          highlightLevels: [warm, rnd(lerp(i, 1, 4)), -warm],
+          preserveLuminosity: true
+        },
+        name: "XT · Balance"
+      }
+    }]);
+  }
+
+  async function colorGradePro(doc, i) {
+    var profile = (state && state.profile) || "casamento";
+    var look = ACR_LOOK[profile] || {};
+    await stamp(doc, "XT · Camera Raw");
+    await toSmartObject();
+    var ok = await acr(i, look);
+    if (!ok) await adjVibrance(i, "XT · Vibrance", null);
+
+    await makeExposure(i);
+    await makeLevels(i);
+    await makeCurvesGrade(i);
+    await adjVibrance(i, "XT · Vibrance", null);
+    await makeHueSat(i);
+    await makeSelective(i);
+    await makeBalance(i);
+    await adjWarm(Math.max(10, i * 0.45), null);
   }
 
   async function adjVibrance(i, name, maskKind) {
@@ -894,12 +1127,12 @@
   }
 
   var ACR_LOOK = {
-    casamento: { cl: -18, vi: 14, te: 8, hi: -22, sh: 18, cr: 12 },
-    quinze: { cl: -22, vi: 20, te: 12, cr: 16, hi: -18, sh: 16 },
-    corporativo: { cl: -8, vi: 8, te: 2, cr: 12, hi: -12, sh: 10 },
-    beauty: { cl: -26, vi: 16, te: 6, cr: 10, hi: -16, sh: 14 },
-    newborn: { cl: -24, cr: 4, vi: 8, te: 14, hi: -8, sh: 22, ex: 0.12 },
-    externa: { cl: -12, vi: 12, te: 6, cr: 14, hi: -20, sh: 16 }
+    casamento: { cl: -18, vi: 16, te: 8, ti: 4, hi: -24, sh: 18, cr: 12, tx: 8, dh: 3 },
+    quinze: { cl: -22, vi: 22, te: 12, ti: 6, cr: 16, hi: -18, sh: 16, tx: 10, dh: 2 },
+    corporativo: { cl: -8, vi: 10, te: 2, ti: 2, cr: 14, hi: -14, sh: 10, tx: 12, dh: 4 },
+    beauty: { cl: -26, vi: 18, te: 6, ti: 5, cr: 10, hi: -16, sh: 14, tx: 6, dh: 2 },
+    newborn: { cl: -24, cr: 4, vi: 10, te: 14, ti: 6, hi: -8, sh: 22, ex: 0.14, tx: 2, dh: 0 },
+    externa: { cl: -12, vi: 14, te: 6, ti: 3, cr: 14, hi: -22, sh: 16, tx: 12, dh: 6 }
   };
 
   async function look(doc, id, i) {
@@ -1009,12 +1242,9 @@
         return;
       case "grade":
       case "contrasteFinal":
-      case "solarCurve": {
-        var g = await stamp(doc, "XT · " + ATOM[key].label);
-        try { await acr(i); } catch (err) { await adjVibrance(i, "XT · Vibrance", "subject"); }
-        await finishMask("reveal");
+      case "solarCurve":
+        await colorGradePro(doc, i);
         return;
-      }
       case "glamourGlow": {
         var gl = await stamp(doc, "XT · Glow");
         await gauss(gl, lerp(i, 8, 22));
