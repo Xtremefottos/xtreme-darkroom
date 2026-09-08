@@ -117,14 +117,19 @@
 
   async function bp(list) {
     var cmds = list.map(function (d) {
-      if (!d._options) d._options = { dialogOptions: "dontDisplay" };
+      d._options = { dialogOptions: "silent" };
       return d;
     });
-    return action.batchPlay(cmds, {});
+    try {
+      return await action.batchPlay(cmds, { modalBehavior: "execute" });
+    } catch (e) {
+      return null;
+    }
   }
 
   async function runModal(name, fn) {
     if (!app.documents.length) throw new Error("Abra um documento.");
+    var modalErr = null;
     await core.executeAsModal(async function (ctx) {
       var doc = app.activeDocument;
       var host = ctx.hostControl;
@@ -133,10 +138,13 @@
         await promoteBackground(doc);
         try { await deselect(); } catch (e) {}
         await fn(doc);
+      } catch (err) {
+        modalErr = err;
       } finally {
         await host.resumeHistory(token);
       }
     }, { commandName: name });
+    if (modalErr) throw modalErr;
   }
 
 
@@ -241,11 +249,13 @@
   }
 
   async function saveSel(name) {
-    await bp([{
+    if (!(await hasSelection())) return false;
+    var r = await bp([{
       _obj: "duplicate",
       _target: [{ _ref: "channel", _property: "selection" }],
       name: name
     }]);
+    return !!r;
   }
 
   async function loadSel(name, modifier) {
@@ -255,7 +265,8 @@
       to: { _ref: "channel", _name: name }
     };
     if (modifier) cmd.selectionModifier = { _enum: "selectionModifierType", _value: modifier };
-    await bp([cmd]);
+    var r = await bp([cmd]);
+    return !!r;
   }
 
   async function deleteChannel(name) {
@@ -266,27 +277,23 @@
 
   async function subtractPeople(tags) {
     if (!(await hasSelection())) return;
-    try { await saveSel("XT · keep"); } catch (e) { return; }
+    if (!(await saveSel("XT · keep"))) return;
     var ok = false;
     try { ok = await selectPeopleAI(tags); } catch (e) {}
     if (ok) {
-      try { await saveSel("XT · cut"); } catch (e) { ok = false; }
-      try {
-        await loadSel("XT · keep");
-        if (ok) await loadSel("XT · cut", "subtractFromSelection");
-      } catch (e) {
-        try { await loadSel("XT · keep"); } catch (e2) {}
-      }
-      try { await deleteChannel("XT · cut"); } catch (e) {}
+      if (!(await saveSel("XT · cut"))) ok = false;
+      await loadSel("XT · keep");
+      if (ok) await loadSel("XT · cut", "subtractFromSelection");
+      await deleteChannel("XT · cut");
     } else {
-      try { await loadSel("XT · keep"); } catch (e) {}
+      await loadSel("XT · keep");
     }
-    try { await deleteChannel("XT · keep"); } catch (e) {}
+    await deleteChannel("XT · keep");
   }
 
   async function intersectSubject() {
     if (!(await hasSelection())) return;
-    try { await saveSel("XT · keep"); } catch (e) { return; }
+    if (!(await saveSel("XT · keep"))) return;
     var ok = false;
     try {
       await selectSubject();
@@ -296,18 +303,14 @@
       try { ok = await selectPeopleAI(null); } catch (e) {}
     }
     if (ok) {
-      try { await saveSel("XT · subj"); } catch (e) { ok = false; }
-      try {
-        await loadSel("XT · keep");
-        if (ok) await loadSel("XT · subj", "suppressSelection");
-      } catch (e) {
-        try { await loadSel("XT · keep"); } catch (e2) {}
-      }
-      try { await deleteChannel("XT · subj"); } catch (e) {}
+      if (!(await saveSel("XT · subj"))) ok = false;
+      await loadSel("XT · keep");
+      if (ok) await loadSel("XT · subj", "suppressSelection");
+      await deleteChannel("XT · subj");
     } else {
-      try { await loadSel("XT · keep"); } catch (e) {}
+      await loadSel("XT · keep");
     }
-    try { await deleteChannel("XT · keep"); } catch (e) {}
+    await deleteChannel("XT · keep");
   }
 
   async function refineSel(kind) {
@@ -447,62 +450,42 @@
         } catch (e) {}
       }
     } catch (e) {}
-    try {
-      await bp([{
-        _obj: "set",
-        _target: [{ _ref: "layer", _property: "background" }],
-        to: {
-          _obj: "layer",
-          opacity: { _unit: "percentUnit", _value: 100 },
-          mode: { _enum: "blendMode", _value: "normal" }
-        }
-      }]);
-    } catch (e) {}
   }
 
   async function stamp(doc, name) {
     try { await deselect(); } catch (e) {}
     await promoteBackground(doc);
 
-    var layer = null;
-    try {
+    var beforeId = null;
+    try { beforeId = doc.activeLayers[0] && doc.activeLayers[0].id; } catch (e) {}
+    var nLayers = 1;
+    try { nLayers = doc.layers.length; } catch (e) {}
+
+    if (nLayers > 1) {
       await bp([{ _obj: "mergeVisible", duplicate: true }]);
-      layer = doc.activeLayers[0];
+      try {
+        var stamped = doc.activeLayers[0];
+        if (stamped && stamped.id !== beforeId) {
+          try { stamped.name = name; } catch (e) {}
+          return stamped;
+        }
+      } catch (e) {}
+    }
+
+    try {
+      var src = (doc.activeLayers && doc.activeLayers[0]) || (doc.layers && doc.layers[0]);
+      if (src && typeof src.duplicate === "function") {
+        var dup = await src.duplicate();
+        try { dup.name = name; } catch (e) {}
+        if (dup) return dup;
+      }
     } catch (e) {}
 
-    if (!layer) {
-      try {
-        await bp([{
-          _obj: "set",
-          _target: [{ _ref: "channel", _property: "selection" }],
-          to: { _enum: "ordinal", _value: "allEnum" }
-        }]);
-        await bp([{ _obj: "copyMerged" }]);
-        try { await deselect(); } catch (e) {}
-        await bp([{ _obj: "paste", inPlace: true }]);
-        layer = doc.activeLayers[0];
-      } catch (e) {
-        try { await deselect(); } catch (e2) {}
-      }
-    }
-
-    if (!layer) {
-      try {
-        var src = (doc.activeLayers && doc.activeLayers[0]) || (doc.layers && doc.layers[0]);
-        if (src && typeof src.duplicate === "function") layer = await src.duplicate();
-      } catch (e) {}
-    }
-
-    if (!layer) {
-      try {
-        await bp([{
-          _obj: "duplicate",
-          _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
-        }]);
-        layer = doc.activeLayers[0];
-      } catch (e) {}
-    }
-
+    await bp([{
+      _obj: "duplicate",
+      _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }]
+    }]);
+    var layer = doc.activeLayers[0];
     if (!layer) throw new Error("Não copiou a imagem. Clique na camada da foto e tente de novo.");
     try { layer.name = name; } catch (e) {}
     return layer;
