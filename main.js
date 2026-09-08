@@ -41,7 +41,7 @@
     { key: "colorirFundo", label: "Colorir fundo de estúdio" },
     { key: "texturaPele", label: "Textura de pele" },
     { key: "remManchas", label: "Rem. manchas" },
-    { key: "peleDoBruxo", label: "Pele do Bruxo" },
+    { key: "peleDoBruxo", label: "Pele XT" },
     { key: "glamourGlow", label: "Glamour glow" },
     { key: "tomPele", label: "Tom de pele" },
     { key: "remCabeloRosto", label: "Remover cabelo do rosto" },
@@ -739,28 +739,58 @@
     await finishMask("skin");
   }
 
-  async function neuralSkin(doc, i) {
-    var layer = await stamp(doc, "XT · Pele IA");
+  async function dustScratches(layer, radius, threshold) {
+    radius = Math.max(1, rnd(radius));
+    threshold = Math.max(0, rnd(threshold));
     try {
-      await bp([{
-        _obj: "neuralGalleryFilters",
-        NF_UI_DATA: {
-          "spl::filterStack": [{
-            "spl::filterType": "skinSmoothing",
-            "spl::cropStates": [{
-              "spl::values": {
-                smoothness: rnd(lerp(i, 25, 70)),
-                blur: rnd(lerp(i, 8, 22)),
-                skinDetectionMode: 1
-              }
-            }]
-          }]
-        }
-      }]);
+      if (layer && typeof layer.applyDustAndScratches === "function") {
+        await layer.applyDustAndScratches(radius, threshold);
+        return;
+      }
+    } catch (e) {}
+    try {
+      await bp([{ _obj: "dustAndScratches", radius: radius, threshold: threshold }]);
     } catch (e) {
-      await surface(layer, lerp(i, 10, 24), rnd(lerp(i, 8, 18)));
+      try {
+        await bp([{ _obj: "median", radius: { _unit: "pixelsUnit", _value: Math.max(1, radius - 1) } }]);
+      } catch (e2) {
+        await surface(layer, Math.max(3, radius * 2), threshold);
+      }
     }
-    layer.opacity = lerp(i, 55, 85);
+  }
+
+  async function peleXT(doc, i) {
+    var w = 3000, h = 4000;
+    try {
+      w = doc.width && doc.width.value != null ? doc.width.value : doc.width;
+      h = doc.height && doc.height.value != null ? doc.height.value : doc.height;
+    } catch (e) {}
+    var minSide = Math.min(Number(w) || 3000, Number(h) || 4000);
+    var surfR = Math.max(8, Math.min(42, lerp(i, minSide / 260, minSide / 130)));
+    var surfT = rnd(lerp(i, 14, 26));
+    var dsR = Math.max(2, Math.min(12, lerp(i, minSide / 700, minSide / 380)));
+    var dsT = rnd(lerp(i, 10, 20));
+    var hpR = lerp(i, 1.3, 2.6);
+
+    var pele = await stamp(doc, "XT · Pele");
+    await surface(pele, surfR, surfT);
+    pele.opacity = lerp(i, 72, 92);
+    await finishMask("skin");
+    await blendIfMids();
+
+    var manchas = await stamp(doc, "XT · Manchas");
+    await dustScratches(manchas, dsR, dsT);
+    try {
+      await bp([{ _obj: "median", radius: { _unit: "pixelsUnit", _value: Math.max(1, rnd(dsR * 0.6)) } }]);
+    } catch (e) {}
+    manchas.opacity = lerp(i, 70, 90);
+    await finishMask("skin");
+
+    var tex = await stamp(doc, "XT · Textura");
+    await highPass(tex, hpR);
+    await setBlend(tex, "linearLight");
+    tex.opacity = lerp(i, 24, 44);
+    await finishMask("skin");
   }
 
   async function blendRange(s0, s1, s2, s3, d0, d1, d2, d3) {
@@ -907,16 +937,10 @@
     switch (key) {
       case "skinHeal":
       case "remManchas":
-      case "mesclagem": {
-        var s = await stamp(doc, "XT · " + ATOM[key].label);
-        await surface(s, lerp(i, 8, 24), rnd(lerp(i, 8, 18)));
-        s.opacity = lerp(i, 28, 62);
-        await finishMask("skin");
-        return;
-      }
+      case "mesclagem":
       case "pelePerfeita":
       case "peleDoBruxo":
-        await neuralSkin(doc, i);
+        await peleXT(doc, i);
         return;
       case "freqSep":
       case "texturaPele":
