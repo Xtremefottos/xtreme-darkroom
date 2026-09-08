@@ -1,12 +1,11 @@
 (function () {
-  const statusEl = document.getElementById("status");
-
+  var statusEl = document.getElementById("status");
   function setStatus(msg, isError) {
     statusEl.textContent = msg;
     statusEl.parentElement.classList.toggle("error", !!isError);
   }
 
-  let photoshop;
+  var photoshop;
   try {
     photoshop = require("photoshop");
   } catch (err) {
@@ -14,184 +13,213 @@
     return;
   }
 
-  const { core, action, app } = photoshop;
-  const uxp = require("uxp");
+  var core = photoshop.core;
+  var action = photoshop.action;
+  var app = photoshop.app;
+  var constants = photoshop.constants;
+  var uxp = require("uxp");
 
-  const state = {
-    profile: "casamento",
-    intensity: 50,
-    batch: {
-      pelePerfeita: true,
-      freqSep: true,
-      dodge: true,
-      olhosMagicos: true,
-      dentesBrancos: true,
-      contrasteFinal: true
-    }
-  };
+  var state = { profile: "casamento", intensity: 50 };
 
-  const ATOMS = [
-    { key: "skinHeal", label: "Pele", group: "XT · Pele" },
-    { key: "freqSep", label: "Frequência", group: "XT · Frequência" },
-    { key: "dodgeBurn", label: "D&B", group: "XT · D&B" },
-    { key: "eyes", label: "Olhos", group: "XT · Olhos" },
-    { key: "teeth", label: "Dentes", group: "XT · Dentes" },
-    { key: "grade", label: "Cor", group: "XT · Grade" },
-    { key: "pelePerfeita", label: "Pele perfeita", group: "XT · Pele perfeita" },
-    { key: "mesclagem", label: "Mesclagem", group: "XT · Mesclagem" },
-    { key: "copiarCores", label: "Copiar cores", group: "XT · Copiar cores" },
-    { key: "limparFundo", label: "Limpar fundo de estúdio", group: "XT · Fundo limpo" },
-    { key: "limparFundoExterna", label: "Limpar fundo externa", group: "XT · Fundo externa" },
-    { key: "colorirFundo", label: "Colorir fundo de estúdio", group: "XT · Fundo cor" },
-    { key: "texturaPele", label: "Textura de pele", group: "XT · Textura" },
-    { key: "remManchas", label: "Rem. manchas", group: "XT · Manchas" },
-    { key: "peleDoBruxo", label: "Pele do Bruxo", group: "XT · Pele do Bruxo" },
-    { key: "glamourGlow", label: "Glamour glow", group: "XT · Glow" },
-    { key: "tomPele", label: "Tom de pele", group: "XT · Tom de pele" },
-    { key: "remCabeloRosto", label: "Remover cabelo do rosto", group: "XT · Cabelo" },
-    { key: "checkLayer", label: "Check layer", group: "XT · Check" },
-    { key: "solarCurve", label: "Solar curve", group: "XT · Solar" },
-    { key: "dbCurvas", label: "DB curvas", group: "XT · DB curvas" },
-    { key: "dodge", label: "Dodge", group: "XT · Dodge" },
-    { key: "burn", label: "Burn", group: "XT · Burn" },
-    { key: "olhosTrocarCor", label: "Trocar cor", group: "XT · Cor dos olhos" },
-    { key: "olhosMagicos", label: "Olhos mágicos", group: "XT · Olhos mágicos" },
-    { key: "dbOlhos", label: "DB olhos", group: "XT · DB olhos" },
-    { key: "olhosNitidez", label: "Nitidez", group: "XT · Nitidez olhos" },
-    { key: "olhosContorno", label: "Contorno", group: "XT · Contorno olhos" },
-    { key: "dentesBrancos", label: "Dentes brancos", group: "XT · Dentes" },
-    { key: "batom", label: "Batom", group: "XT · Batom" },
-    { key: "batomTrocarCor", label: "Trocar cor", group: "XT · Cor batom" },
-    { key: "volumeBatom", label: "Volume do batom", group: "XT · Volume batom" },
-    { key: "extratorDetalhes", label: "Extrator de detalhes", group: "XT · Extrator" },
-    { key: "grao", label: "Grão", group: "XT · Grão" },
-    { key: "nitidez12", label: "Nitidez 1.2", group: "XT · Nitidez 1.2" },
-    { key: "superNitidez", label: "Super nitidez", group: "XT · Super nitidez" },
-    { key: "desfoque", label: "Desfoque", group: "XT · Desfoque" },
-    { key: "destaque", label: "Destaque", group: "XT · Destaque" },
-    { key: "contrasteFundo", label: "Contraste de fundo", group: "XT · Contraste fundo" },
-    { key: "corIndireta", label: "Cor indireta", group: "XT · Cor indireta" },
-    { key: "escurecer", label: "Escurecer", group: "XT · Escurecer" },
-    { key: "luzBaixa", label: "Luz baixa", group: "XT · Luz baixa" },
-    { key: "contrasteFinal", label: "Contraste final", group: "XT · Contraste final" },
-    { key: "salvarFoto", label: "Salvar foto", group: "XT · Salvar", exportKind: "save" },
-    { key: "salvarComo", label: "Salvar como", group: "XT · Salvar como", exportKind: "jpg" },
-    { key: "salvarInternet", label: "Salvar para internet", group: "XT · Web", exportKind: "web" }
+  var ATOMS = [
+    { key: "skinHeal", label: "Pele" },
+    { key: "freqSep", label: "Frequência" },
+    { key: "dodgeBurn", label: "D&B" },
+    { key: "eyes", label: "Olhos" },
+    { key: "teeth", label: "Dentes" },
+    { key: "grade", label: "Cor" },
+    { key: "pelePerfeita", label: "Pele perfeita" },
+    { key: "mesclagem", label: "Mesclagem" },
+    { key: "copiarCores", label: "Copiar cores" },
+    { key: "limparFundo", label: "Limpar fundo de estúdio" },
+    { key: "limparFundoExterna", label: "Limpar fundo externa" },
+    { key: "colorirFundo", label: "Colorir fundo de estúdio" },
+    { key: "texturaPele", label: "Textura de pele" },
+    { key: "remManchas", label: "Rem. manchas" },
+    { key: "peleDoBruxo", label: "Pele do Bruxo" },
+    { key: "glamourGlow", label: "Glamour glow" },
+    { key: "tomPele", label: "Tom de pele" },
+    { key: "remCabeloRosto", label: "Remover cabelo do rosto" },
+    { key: "checkLayer", label: "Check layer" },
+    { key: "solarCurve", label: "Solar curve" },
+    { key: "dbCurvas", label: "DB curvas" },
+    { key: "dodge", label: "Dodge" },
+    { key: "burn", label: "Burn" },
+    { key: "olhosTrocarCor", label: "Trocar cor" },
+    { key: "olhosMagicos", label: "Olhos mágicos" },
+    { key: "dbOlhos", label: "DB olhos" },
+    { key: "olhosNitidez", label: "Nitidez" },
+    { key: "olhosContorno", label: "Contorno" },
+    { key: "dentesBrancos", label: "Dentes brancos" },
+    { key: "batom", label: "Batom" },
+    { key: "batomTrocarCor", label: "Trocar cor" },
+    { key: "volumeBatom", label: "Volume do batom" },
+    { key: "extratorDetalhes", label: "Extrator de detalhes" },
+    { key: "grao", label: "Grão" },
+    { key: "nitidez12", label: "Nitidez 1.2" },
+    { key: "superNitidez", label: "Super nitidez" },
+    { key: "desfoque", label: "Desfoque" },
+    { key: "destaque", label: "Destaque" },
+    { key: "contrasteFundo", label: "Contraste de fundo" },
+    { key: "corIndireta", label: "Cor indireta" },
+    { key: "escurecer", label: "Escurecer" },
+    { key: "luzBaixa", label: "Luz baixa" },
+    { key: "contrasteFinal", label: "Contraste final" },
+    { key: "salvarFoto", label: "Salvar foto", exportKind: "save" },
+    { key: "salvarComo", label: "Salvar como", exportKind: "jpg" },
+    { key: "salvarInternet", label: "Salvar para internet", exportKind: "web" }
   ];
-  const ATOM = {};
+  var ATOM = {};
   ATOMS.forEach(function (a) { ATOM[a.key] = a; });
 
-  const SECTIONS = [
-    { id: "rapidos", label: "Rápidos", keys: ["skinHeal", "freqSep", "dodgeBurn", "eyes", "teeth", "grade"] },
-    { id: "estudio", label: "Estúdio", keys: ["pelePerfeita", "mesclagem", "copiarCores", "limparFundo", "limparFundoExterna", "colorirFundo"] },
-    { id: "pele", label: "Pele", keys: ["texturaPele", "remManchas", "freqSep", "peleDoBruxo", "glamourGlow", "tomPele", "remCabeloRosto"] },
-    { id: "db", label: "Dodge and burn", keys: ["checkLayer", "solarCurve", "dbCurvas", "dodge", "burn"] },
-    { id: "olhos", label: "Olhos", keys: ["olhosTrocarCor", "olhosMagicos", "dbOlhos", "olhosNitidez", "olhosContorno"] },
-    { id: "boca", label: "Batom e dentes", keys: ["dentesBrancos", "batom", "batomTrocarCor", "volumeBatom"] },
-    { id: "detalhes", label: "Detalhes", keys: ["extratorDetalhes", "grao", "nitidez12", "superNitidez"] },
-    { id: "desfoque", label: "Desfoque", keys: ["desfoque", "destaque"] },
-    { id: "final", label: "Finalização", keys: ["contrasteFundo", "corIndireta", "escurecer", "luzBaixa", "contrasteFinal"] },
-    { id: "salvar", label: "Salvamento", keys: ["salvarFoto", "salvarComo", "salvarInternet"] }
-  ];
-
-  const PROFILES = {
-    casamento: { label: "Casamento", stack: [["pelePerfeita", 45], ["freqSep", 40], ["dodge", 30], ["burn", 28], ["olhosMagicos", 30], ["dentesBrancos", 25], ["contrasteFinal", 30]] },
-    quinze: { label: "15 anos", stack: [["peleDoBruxo", 55], ["glamourGlow", 35], ["freqSep", 50], ["dodge", 35], ["olhosMagicos", 45], ["batom", 40], ["dentesBrancos", 35], ["contrasteFinal", 40]] },
-    corporativo: { label: "Corporativo", stack: [["pelePerfeita", 30], ["freqSep", 28], ["dodge", 20], ["olhosNitidez", 22], ["contrasteFinal", 18]] },
-    beauty: { label: "Beauty", stack: [["peleDoBruxo", 60], ["texturaPele", 40], ["freqSep", 55], ["glamourGlow", 30], ["olhosMagicos", 50], ["batom", 45], ["superNitidez", 28]] },
-    newborn: { label: "Newborn", stack: [["pelePerfeita", 35], ["tomPele", 28], ["freqSep", 25], ["luzBaixa", 20], ["contrasteFinal", 22]] },
-    externa: { label: "Externa", stack: [["pelePerfeita", 32], ["limparFundoExterna", 55], ["destaque", 28], ["dodge", 22], ["contrasteFinal", 24]] }
+  var PROFILES = {
+    casamento: { label: "Casamento" },
+    quinze: { label: "15 anos" },
+    corporativo: { label: "Corporativo" },
+    beauty: { label: "Beauty" },
+    newborn: { label: "Newborn" },
+    externa: { label: "Externa" }
   };
 
-
-  function scale(i, min, max) { return min + (max - min) * (i / 100); }
+  function t(i) { return i / 100; }
+  function lerp(i, a, b) { return a + (b - a) * t(i); }
   function rnd(n) { return Math.round(n); }
-  function D(obj) {
-    obj._options = { dialogOptions: "dontDisplay" };
-    return obj;
+
+  async function bp(list) {
+    var cmds = list.map(function (d) {
+      if (!d._options) d._options = { dialogOptions: "dontDisplay" };
+      return d;
+    });
+    return action.batchPlay(cmds, {});
   }
-  function stamp(name) {
-    return [
-      D({ _obj: "mergeVisible", duplicate: true }),
-      D({
+
+  async function runModal(name, fn) {
+    if (!app.documents.length) throw new Error("Abra um documento.");
+    await core.executeAsModal(async function (ctx) {
+      var doc = app.activeDocument;
+      var host = ctx.hostControl;
+      var token = await host.suspendHistory({ documentID: doc.id, name: name });
+      try {
+        await fn(doc);
+      } finally {
+        await host.resumeHistory(token);
+      }
+    }, { commandName: name });
+  }
+
+  async function stamp(doc, name) {
+    await bp([{ _obj: "mergeVisible", duplicate: true }]);
+    var layer = doc.activeLayers[0];
+    if (!layer) throw new Error("Não copiou a imagem. Desbloqueie o fundo e tente de novo.");
+    layer.name = name;
+    return layer;
+  }
+
+  function is16(doc) {
+    var b = doc.bitsPerChannel;
+    if (b === 16) return true;
+    try {
+      if (constants && constants.BitsPerChannelType && b === constants.BitsPerChannelType.SIXTEEN) return true;
+    } catch (e) {}
+    return String(b).toLowerCase().indexOf("sixteen") >= 0 || String(b) === "16";
+  }
+
+  async function gauss(layer, radius) {
+    if (typeof layer.applyGaussianBlur === "function") await layer.applyGaussianBlur(radius);
+    else await bp([{ _obj: "gaussianBlur", radius: { _unit: "pixelsUnit", _value: radius } }]);
+  }
+
+  async function surface(layer, radius, threshold) {
+    if (typeof layer.applySurfaceBlur === "function") await layer.applySurfaceBlur(radius, threshold);
+    else await bp([{ _obj: "surfaceBlur", radius: { _unit: "pixelsUnit", _value: radius }, threshold: threshold }]);
+  }
+
+  async function highPass(layer, radius) {
+    if (typeof layer.applyHighPass === "function") await layer.applyHighPass(radius);
+    else await bp([{ _obj: "highPass", radius: { _unit: "pixelsUnit", _value: radius } }]);
+  }
+
+  async function unsharp(layer, amount, radius) {
+    if (typeof layer.applyUnsharpMask === "function") await layer.applyUnsharpMask(amount, radius, 3);
+    else await bp([{
+      _obj: "unsharpMask",
+      amount: { _unit: "percentUnit", _value: amount },
+      radius: { _unit: "pixelsUnit", _value: radius },
+      threshold: 3
+    }]);
+  }
+
+  async function setBlend(layer, mode) {
+    try { layer.blendMode = mode; } catch (e) {
+      await bp([{
         _obj: "set",
         _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
-        to: { _obj: "layer", name: name }
-      })
-    ];
+        to: { _obj: "layer", mode: { _enum: "blendMode", _value: mode } }
+      }]);
+    }
   }
-  function opacity(pct) {
-    return D({
+
+  async function fillGray() {
+    await bp([{
+      _obj: "fill",
+      using: { _enum: "fillContents", _value: "color" },
+      color: { _obj: "RGBColor", red: 128, grain: 128, blue: 128 },
+      opacity: { _unit: "percentUnit", _value: 100 },
+      mode: { _enum: "blendMode", _value: "normal" }
+    }]);
+  }
+
+  async function selectSubject() {
+    try {
+      await bp([{ _obj: "autoCutout", sampleAllLayers: true }]);
+    } catch (e) {
+      await bp([{ _obj: "selectSubject", sampleAllLayers: true }]);
+    }
+  }
+
+  async function invertSel() { await bp([{ _obj: "inverse" }]); }
+  async function deselect() {
+    await bp([{
       _obj: "set",
-      _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
-      to: { _obj: "layer", opacity: { _unit: "percentUnit", _value: pct } }
-    });
+      _target: [{ _ref: "channel", _property: "selection" }],
+      to: { _enum: "ordinal", _value: "none" }
+    }]);
   }
-  function blend(mode) {
-    return D({
-      _obj: "set",
-      _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
-      to: { _obj: "layer", mode: { _enum: "blendMode", _value: mode } }
-    });
-  }
-  function acr(i, extra) {
+
+  async function acr(i, extra) {
     extra = extra || {};
-    var t = i / 100;
-    return D({
+    await bp([{
       _obj: "Adobe Camera Raw Filter",
       "$CrVe": "15.4",
       "$PrVN": 5,
       "$PrVe": 184549376,
-      "$Ex12": extra.ex != null ? extra.ex : 0.08 + t * 0.12,
-      "$Cr12": extra.cr != null ? extra.cr : rnd(8 + t * 14),
-      "$Hi12": extra.hi != null ? extra.hi : rnd(-18 - t * 18),
-      "$Sh12": extra.sh != null ? extra.sh : rnd(14 + t * 16),
-      "$Wh12": extra.wh != null ? extra.wh : rnd(4 + t * 8),
-      "$Bk12": extra.bk != null ? extra.bk : rnd(-6 - t * 6),
-      "$Cl12": extra.cl != null ? extra.cl : rnd(-10 - t * 16),
-      "$Vibr": extra.vi != null ? extra.vi : rnd(10 + t * 10),
-      "$Strt": extra.st != null ? extra.st : rnd(2 + t * 4),
-      "$Temp": extra.te != null ? extra.te : rnd(5 + t * 8)
-    });
+      "$Ex12": extra.ex != null ? extra.ex : 0.05 + t(i) * 0.12,
+      "$Cr12": extra.cr != null ? extra.cr : rnd(lerp(i, 8, 18)),
+      "$Hi12": extra.hi != null ? extra.hi : rnd(lerp(i, -16, -32)),
+      "$Sh12": extra.sh != null ? extra.sh : rnd(lerp(i, 12, 28)),
+      "$Wh12": extra.wh != null ? extra.wh : rnd(lerp(i, 4, 12)),
+      "$Bk12": extra.bk != null ? extra.bk : rnd(lerp(i, -6, -12)),
+      "$Cl12": extra.cl != null ? extra.cl : rnd(lerp(i, -8, -22)),
+      "$Vibr": extra.vi != null ? extra.vi : rnd(lerp(i, 8, 18)),
+      "$Strt": extra.st != null ? extra.st : rnd(lerp(i, 2, 6)),
+      "$Temp": extra.te != null ? extra.te : rnd(lerp(i, 4, 12))
+    }]);
   }
-  function surface(i) {
-    return D({
-      _obj: "surfaceBlur",
-      radius: { _unit: "pixelsUnit", _value: scale(i, 8, 26) },
-      threshold: rnd(scale(i, 8, 20))
-    });
+
+  async function adjVibrance(i, name) {
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: { _obj: "vibrance", vibrance: rnd(lerp(i, 8, 22)), saturation: rnd(lerp(i, 1, 6)) },
+        name: name || "XT · Vibrance"
+      }
+    }]);
   }
-  function gauss(r) {
-    return D({ _obj: "gaussianBlur", radius: { _unit: "pixelsUnit", _value: r } });
-  }
-  function highPass(r) {
-    return D({ _obj: "highPass", radius: { _unit: "pixelsUnit", _value: r } });
-  }
-  function unsharp(amt, rad) {
-    return D({
-      _obj: "unsharpMask",
-      amount: { _unit: "percentUnit", _value: amt },
-      radius: { _unit: "pixelsUnit", _value: rad },
-      threshold: 3
-    });
-  }
-  function shadowsHighlights(i) {
-    return D({
-      _obj: "shadowHighlight",
-      shadowAmount: rnd(scale(i, 8, 22)),
-      shadowWidth: 50,
-      shadowRadius: 30,
-      highlightAmount: rnd(scale(i, 6, 16)),
-      highlightWidth: 50,
-      highlightRadius: 30,
-      colorCorrection: 15,
-      midtoneContrast: rnd(scale(i, 2, 8)),
-      blackClip: 0.01,
-      whiteClip: 0.01
-    });
-  }
-  function photoWarm(i) {
-    return D({
+
+  async function adjWarm(i) {
+    await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
       using: {
@@ -199,66 +227,157 @@
         type: {
           _obj: "photoFilter",
           color: { _obj: "RGBColor", red: 236, grain: 138, blue: 0 },
-          density: rnd(scale(i, 6, 16)),
+          density: rnd(lerp(i, 6, 16)),
           preserveLuminosity: true
         },
         name: "XT · Tom quente"
       }
-    });
+    }]);
   }
-  function vibranceAdj(i) {
-    return D({
+
+  async function adjCurvesUp(name) {
+    await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
       using: {
         _obj: "adjustmentLayer",
         type: {
-          _obj: "vibrance",
-          vibrance: rnd(scale(i, 8, 22)),
-          saturation: rnd(scale(i, 1, 6))
+          _obj: "curves",
+          presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+          adjustment: [{
+            _obj: "curvesAdjustment",
+            channel: { _ref: "channel", _enum: "channel", _value: "composite" },
+            curve: [
+              { _obj: "paint", horizontal: 0, vertical: 0 },
+              { _obj: "paint", horizontal: 128, vertical: 140 },
+              { _obj: "paint", horizontal: 255, vertical: 255 }
+            ]
+          }]
         },
-        name: "XT · Vibrance"
+        name: name
       }
-    });
+    }]);
+    try { await bp([{ _obj: "invert" }]); } catch (e) {}
   }
-  function hueYellows(i) {
-    return D({
+
+  async function adjCurvesDown(name) {
+    await bp([{
       _obj: "make",
       _target: [{ _ref: "adjustmentLayer" }],
       using: {
         _obj: "adjustmentLayer",
         type: {
-          _obj: "hueSaturation",
-          colorize: false,
-          adjustment: [
-            { _obj: "hueSatAdjustmentV2" },
-            {
-              _obj: "hueSatAdjustmentV2",
-              localRange: 1,
-              beginRamp: 15,
-              beginSustain: 45,
-              endSustain: 75,
-              endRamp: 105,
-              hue: 0,
-              saturation: rnd(scale(i, -10, -22)),
-              lightness: rnd(scale(i, 3, 10))
-            }
-          ]
+          _obj: "curves",
+          presetKind: { _enum: "presetKindType", _value: "presetKindCustom" },
+          adjustment: [{
+            _obj: "curvesAdjustment",
+            channel: { _ref: "channel", _enum: "channel", _value: "composite" },
+            curve: [
+              { _obj: "paint", horizontal: 0, vertical: 0 },
+              { _obj: "paint", horizontal: 128, vertical: 116 },
+              { _obj: "paint", horizontal: 255, vertical: 255 }
+            ]
+          }]
         },
-        name: "XT · Dentes"
+        name: name
       }
-    });
+    }]);
+    try { await bp([{ _obj: "invert" }]); } catch (e) {}
   }
-  function subject() { return D({ _obj: "autoCutout", sampleAllLayers: true }); }
-  function inverse() { return D({ _obj: "inverse" }); }
-  function deselect() {
-    return D({
-      _obj: "set",
-      _target: [{ _ref: "channel", _property: "selection" }],
-      to: { _enum: "ordinal", _value: "none" }
-    });
+
+  async function freqSep(doc, radius) {
+    var hf = await stamp(doc, "XT · HF");
+    await hf.duplicate();
+    var lf = doc.activeLayers[0];
+    lf.name = "XT · LF";
+    await gauss(lf, radius);
+    await bp([{ _obj: "select", _target: [{ _ref: "layer", _name: "XT · HF" }], makeVisible: false }]);
+    var apply = is16(doc)
+      ? {
+          _obj: "applyImageEvent",
+          with: {
+            _obj: "calculation",
+            to: { _ref: [{ _ref: "channel", _enum: "channel", _value: "RGB" }, { _ref: "layer", _name: "XT · LF" }] },
+            calculation: { _enum: "calculationType", _value: "add" },
+            scale: 2,
+            offset: 0,
+            invert: true
+          }
+        }
+      : {
+          _obj: "applyImageEvent",
+          with: {
+            _obj: "calculation",
+            to: { _ref: [{ _ref: "channel", _enum: "channel", _value: "RGB" }, { _ref: "layer", _name: "XT · LF" }] },
+            calculation: { _enum: "calculationType", _value: "subtract" },
+            scale: 2,
+            offset: 128,
+            invert: false
+          }
+        };
+    await bp([apply]);
+    await setBlend(doc.activeLayers[0], "linearLight");
   }
-  function rec(title, descriptors) { return { title: title, descriptors: descriptors }; }
+
+  async function neuralSkin(doc, i) {
+    var layer = await stamp(doc, "XT · Pele IA");
+    try {
+      await bp([{
+        _obj: "neuralGalleryFilters",
+        NF_UI_DATA: {
+          "spl::filterStack": [{
+            "spl::filterType": "skinSmoothing",
+            "spl::cropStates": [{
+              "spl::values": {
+                smoothness: rnd(lerp(i, 25, 70)),
+                blur: rnd(lerp(i, 8, 22)),
+                skinDetectionMode: 1
+              }
+            }]
+          }]
+        }
+      }]);
+    } catch (e) {
+      await surface(layer, lerp(i, 10, 24), rnd(lerp(i, 8, 18)));
+    }
+    layer.opacity = lerp(i, 55, 85);
+  }
+
+  async function grayDB(doc, name) {
+    await bp([{ _obj: "make", _target: [{ _ref: "layer" }] }]);
+    var layer = doc.activeLayers[0];
+    layer.name = name;
+    await fillGray();
+    await setBlend(layer, "softLight");
+    return layer;
+  }
+
+  async function bgClean(doc, i, mode) {
+    var layer = await stamp(doc, mode === "externa" ? "XT · Fundo externa" : "XT · Fundo limpo");
+    await selectSubject();
+    await invertSel();
+    try {
+      await bp([{ _obj: "expand", by: { _unit: "pixelsUnit", _value: 4 } }]);
+    } catch (e) {}
+    if (mode === "externa") {
+      await gauss(layer, lerp(i, 12, 30));
+      layer.opacity = lerp(i, 60, 90);
+    } else if (mode === "color") {
+      await adjWarm(Math.min(100, i + 20));
+    } else {
+      try {
+        await bp([{
+          _obj: "fill",
+          using: { _enum: "fillContents", _value: "contentAware" },
+          opacity: { _unit: "percentUnit", _value: 100 },
+          mode: { _enum: "blendMode", _value: "normal" }
+        }]);
+      } catch (e) {
+        await gauss(layer, lerp(i, 4, 12));
+      }
+    }
+    try { await deselect(); } catch (e) {}
+  }
 
   var ACR_LOOK = {
     casamento: { cl: -18, vi: 14, te: 8, hi: -22, sh: 18, cr: 12 },
@@ -269,145 +388,85 @@
     externa: { cl: -12, vi: 12, te: 6, cr: 14, hi: -20, sh: 16 }
   };
 
-  function lookDescriptors(id, i) {
-    var d = [];
-    d = d.concat(stamp("XT · " + (PROFILES[id] ? PROFILES[id].label : "Look")));
-    d.push(acr(i, ACR_LOOK[id] || {}));
-    d = d.concat(stamp("XT · Pele"));
-    d.push(surface(id === "beauty" ? Math.min(100, i + 12) : id === "corporativo" ? i * 0.75 : i));
-    d.push(opacity(id === "newborn" ? scale(i, 22, 40) : scale(i, 32, 55)));
+  async function look(doc, id, i) {
+    var base = await stamp(doc, "XT · " + PROFILES[id].label);
+    try {
+      await acr(i, ACR_LOOK[id] || {});
+    } catch (e) {
+      await adjVibrance(i, "XT · Vibrance");
+    }
+    var pele = await stamp(doc, "XT · Pele");
+    await surface(pele, id === "beauty" ? lerp(i, 12, 28) : lerp(i, 8, 22), rnd(lerp(i, 8, 16)));
+    pele.opacity = id === "newborn" ? lerp(i, 22, 42) : lerp(i, 32, 55);
     if (id === "quinze" || id === "beauty") {
-      d = d.concat(stamp("XT · Glow"));
-      d.push(gauss(scale(i, 8, 18)));
-      d.push(blend("screen"));
-      d.push(opacity(scale(i, 10, 24)));
+      var glow = await stamp(doc, "XT · Glow");
+      await gauss(glow, lerp(i, 8, 18));
+      await setBlend(glow, "screen");
+      glow.opacity = lerp(i, 10, 24);
     }
     if (id !== "newborn") {
-      d = d.concat(stamp("XT · Nitidez"));
-      d.push(unsharp(scale(i, 35, 72), 1.15));
-      d.push(opacity(scale(i, 42, 72)));
+      var n = await stamp(doc, "XT · Nitidez");
+      await unsharp(n, lerp(i, 35, 72), 1.15);
+      n.opacity = lerp(i, 42, 72);
     }
-    d.push(photoWarm(id === "corporativo" ? i * 0.5 : i));
-    d.push(vibranceAdj(i));
-    if (id === "externa") {
-      d.push(subject());
-      d.push(inverse());
-      d = d.concat(stamp("XT · Fundo externa"));
-      d.push(gauss(scale(i, 12, 28)));
-      d.push(opacity(scale(i, 60, 88)));
-      d.push(deselect());
-    }
-    if (id === "casamento" || id === "corporativo") {
-      d.push(subject());
-      d.push(inverse());
-      d = d.concat(stamp("XT · Fundo"));
-      d.push(D({
-        _obj: "brightnessEvent",
-        brightness: rnd(scale(i, 2, 8)),
-        contrast: rnd(scale(i, 2, 10)),
-        useLegacy: false
-      }));
-      d.push(deselect());
-    }
-    return d;
+    await adjWarm(id === "corporativo" ? i * 0.5 : i);
+    await adjVibrance(i);
+    if (id === "externa") await bgClean(doc, i, "externa");
+    if (id === "casamento" || id === "corporativo") await bgClean(doc, i * 0.6, "studio");
   }
 
-  function recipe(key, i) {
+  async function runKey(doc, key, i) {
     switch (key) {
       case "skinHeal":
+      case "remManchas":
+      case "mesclagem": {
+        var s = await stamp(doc, "XT · " + ATOM[key].label);
+        await surface(s, lerp(i, 8, 24), rnd(lerp(i, 8, 18)));
+        s.opacity = lerp(i, 28, 62);
+        return;
+      }
       case "pelePerfeita":
       case "peleDoBruxo":
-      case "remManchas":
-      case "mesclagem":
-        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([surface(i), opacity(scale(i, 28, 62))]));
-      case "remCabeloRosto":
-        return rec("Cabelo", stamp("XT · Cabelo").concat([
-          D({ _obj: "dustAndScratches", radius: rnd(scale(i, 2, 6)), threshold: 8 }),
-          opacity(scale(i, 20, 45))
-        ]));
+        await neuralSkin(doc, i);
+        return;
       case "freqSep":
       case "texturaPele":
-      case "extratorDetalhes":
-        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
-          highPass(scale(i, 1.2, 2.8)),
-          blend("overlay"),
-          opacity(scale(i, 18, 48))
-        ]));
+        await freqSep(doc, lerp(i, 3.5, 10));
+        return;
+      case "extratorDetalhes": {
+        var e = await stamp(doc, "XT · Extrator");
+        await highPass(e, lerp(i, 1.2, 2.8));
+        await setBlend(e, "overlay");
+        e.opacity = lerp(i, 18, 48);
+        return;
+      }
       case "dodgeBurn":
+        await grayDB(doc, "XT · D&B");
+        return;
       case "dodge":
       case "dbOlhos":
-      case "dbCurvas":
-      case "solarCurve":
-        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
-          shadowsHighlights(i),
-          blend("softLight"),
-          opacity(scale(i, 40, 85))
-        ]));
+        await adjCurvesUp("XT · Dodge");
+        return;
       case "burn":
-      case "escurecer":
-      case "contrasteFundo":
-      case "luzBaixa":
-        return rec(ATOM[key].label, [subject(), inverse()].concat(stamp(ATOM[key].group), [
-          D({
-            _obj: "brightnessEvent",
-            brightness: rnd(scale(i, -8, -22)),
-            contrast: rnd(scale(i, 4, 14)),
-            useLegacy: false
-          }),
-          deselect()
-        ]));
+      case "olhosContorno":
+        await adjCurvesDown("XT · Burn");
+        return;
+      case "dbCurvas":
+        await adjCurvesUp("XT · Dodge");
+        await adjCurvesDown("XT · Burn");
+        return;
       case "eyes":
       case "olhosMagicos":
-        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
-          unsharp(scale(i, 40, 90), 1.3),
-          blend("softLight"),
-          opacity(scale(i, 22, 50))
-        ]));
-      case "olhosNitidez":
-      case "nitidez12":
-      case "superNitidez":
-        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
-          unsharp(key === "superNitidez" ? scale(i, 70, 140) : scale(i, 35, 80), key === "superNitidez" ? 1.6 : 1.1),
-          opacity(scale(i, 40, 85))
-        ]));
+      case "olhosNitidez": {
+        var o = await stamp(doc, "XT · Olhos");
+        await unsharp(o, lerp(i, 40, 90), 1.3);
+        await setBlend(o, "softLight");
+        o.opacity = lerp(i, 22, 50);
+        return;
+      }
       case "teeth":
       case "dentesBrancos":
-        return rec(ATOM[key].label, [hueYellows(i)]);
-      case "grade":
-      case "contrasteFinal":
-        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([acr(i)]));
-      case "glamourGlow":
-        return rec("Glow", stamp("XT · Glow").concat([gauss(scale(i, 8, 22)), blend("screen"), opacity(scale(i, 12, 32))]));
-      case "tomPele":
-      case "corIndireta":
-        return rec(ATOM[key].label, [photoWarm(i)]);
-      case "copiarCores":
-        return rec("Copiar cores", [vibranceAdj(i)]);
-      case "limparFundo":
-        return rec("Fundo estúdio", [subject(), inverse()].concat(stamp("XT · Fundo limpo"), [
-          D({
-            _obj: "hueSaturation",
-            colorize: false,
-            adjustment: [{ _obj: "hueSatAdjustmentV2", saturation: rnd(scale(i, -20, -50)), lightness: rnd(scale(i, 4, 14)) }]
-          }),
-          deselect()
-        ]));
-      case "limparFundoExterna":
-        return rec("Fundo externa", [subject(), inverse()].concat(stamp("XT · Fundo externa"), [
-          gauss(scale(i, 10, 32)),
-          opacity(scale(i, 55, 90)),
-          deselect()
-        ]));
-      case "colorirFundo":
-        return rec("Fundo cor", [subject(), inverse()].concat(stamp("XT · Fundo cor"), [photoWarm(Math.min(100, i + 20)), deselect()]));
-      case "checkLayer":
-        return rec("Check", stamp("XT · Check").concat([
-          D({ _obj: "blackAndWhite", presetKind: { _enum: "presetKindType", _value: "presetKindDefault" } }),
-          opacity(scale(i, 50, 100))
-        ]));
-      case "olhosTrocarCor":
-      case "batomTrocarCor":
-        return rec(ATOM[key].label, [D({
+        await bp([{
           _obj: "make",
           _target: [{ _ref: "adjustmentLayer" }],
           using: {
@@ -415,66 +474,144 @@
             type: {
               _obj: "hueSaturation",
               colorize: false,
-              adjustment: [{ _obj: "hueSatAdjustmentV2", hue: rnd(scale(i, -24, 24)), saturation: 8 }]
+              adjustment: [
+                { _obj: "hueSatAdjustmentV2" },
+                {
+                  _obj: "hueSatAdjustmentV2",
+                  localRange: 1,
+                  beginRamp: 15, beginSustain: 45, endSustain: 75, endRamp: 105,
+                  hue: 0,
+                  saturation: rnd(lerp(i, -10, -22)),
+                  lightness: rnd(lerp(i, 3, 10))
+                }
+              ]
             },
-            name: ATOM[key].group
+            name: "XT · Dentes"
           }
-        })]);
-      case "olhosContorno":
-        return rec("Contorno", stamp("XT · Contorno olhos").concat([highPass(scale(i, 1.5, 3.5)), blend("overlay"), opacity(scale(i, 18, 40))]));
+        }]);
+        return;
+      case "grade":
+      case "contrasteFinal":
+      case "solarCurve": {
+        var g = await stamp(doc, "XT · " + ATOM[key].label);
+        try { await acr(i); } catch (err) { await adjVibrance(i); }
+        return;
+      }
+      case "glamourGlow": {
+        var gl = await stamp(doc, "XT · Glow");
+        await gauss(gl, lerp(i, 8, 22));
+        await setBlend(gl, "screen");
+        gl.opacity = lerp(i, 12, 32);
+        return;
+      }
+      case "tomPele":
+      case "corIndireta":
+        await adjWarm(i);
+        return;
+      case "copiarCores":
       case "batom":
       case "volumeBatom":
-        return rec(ATOM[key].label, [vibranceAdj(i)]);
-      case "grao":
-        return rec("Grão", stamp("XT · Grão").concat([
-          D({
-            _obj: "addNoise",
-            amount: { _unit: "percentUnit", _value: scale(i, 2, 7) },
-            distribution: { _enum: "distribution", _value: "gaussian" },
-            monochromatic: true
-          }),
-          blend("overlay"),
-          opacity(scale(i, 18, 42))
-        ]));
+        await adjVibrance(i, "XT · " + ATOM[key].label);
+        return;
+      case "limparFundo":
+        await bgClean(doc, i, "studio");
+        return;
+      case "limparFundoExterna":
+        await bgClean(doc, i, "externa");
+        return;
+      case "colorirFundo":
+        await bgClean(doc, i, "color");
+        return;
+      case "checkLayer": {
+        var c = await stamp(doc, "XT · Check");
+        await bp([{ _obj: "blackAndWhite", presetKind: { _enum: "presetKindType", _value: "presetKindDefault" } }]);
+        c.opacity = lerp(i, 50, 100);
+        return;
+      }
+      case "nitidez12":
+      case "superNitidez": {
+        var sh = await stamp(doc, "XT · " + ATOM[key].label);
+        await unsharp(sh, key === "superNitidez" ? lerp(i, 70, 140) : lerp(i, 35, 80), key === "superNitidez" ? 1.6 : 1.1);
+        sh.opacity = lerp(i, 40, 85);
+        return;
+      }
+      case "grao": {
+        var gr = await stamp(doc, "XT · Grão");
+        if (typeof gr.applyAddNoise === "function") await gr.applyAddNoise(lerp(i, 2, 7), "gaussian", true);
+        else await bp([{
+          _obj: "addNoise",
+          amount: { _unit: "percentUnit", _value: lerp(i, 2, 7) },
+          distribution: { _enum: "distribution", _value: "gaussian" },
+          monochromatic: true
+        }]);
+        await setBlend(gr, "overlay");
+        gr.opacity = lerp(i, 18, 42);
+        return;
+      }
       case "desfoque":
-        return rec("Desfoque", [subject(), inverse()].concat(stamp("XT · Desfoque"), [gauss(scale(i, 6, 22)), opacity(scale(i, 40, 80)), deselect()]));
-      case "destaque":
-        return rec("Destaque", [subject()].concat(stamp("XT · Destaque"), [
-          D({
-            _obj: "brightnessEvent",
-            brightness: rnd(scale(i, 4, 14)),
-            contrast: rnd(scale(i, 2, 10)),
-            useLegacy: false
-          }),
-          deselect()
-        ]));
-      default:
-        return rec(ATOM[key] ? ATOM[key].label : key, stamp(ATOM[key] ? ATOM[key].group : "XT · Look").concat([acr(i)]));
+        await bgClean(doc, i, "externa");
+        return;
+      case "destaque": {
+        await selectSubject();
+        var d = await stamp(doc, "XT · Destaque");
+        await bp([{
+          _obj: "brightnessEvent",
+          brightness: rnd(lerp(i, 4, 14)),
+          contrast: rnd(lerp(i, 2, 10)),
+          useLegacy: false
+        }]);
+        try { await deselect(); } catch (e) {}
+        return;
+      }
+      case "escurecer":
+      case "contrasteFundo":
+      case "luzBaixa":
+        await selectSubject();
+        await invertSel();
+        var b = await stamp(doc, "XT · " + ATOM[key].label);
+        await bp([{
+          _obj: "brightnessEvent",
+          brightness: rnd(lerp(i, -8, -22)),
+          contrast: rnd(lerp(i, 4, 14)),
+          useLegacy: false
+        }]);
+        try { await deselect(); } catch (e) {}
+        return;
+      case "remCabeloRosto": {
+        var h = await stamp(doc, "XT · Cabelo");
+        if (typeof h.applyDustAndScratches === "function") await h.applyDustAndScratches(rnd(lerp(i, 2, 6)), 8);
+        else await surface(h, lerp(i, 3, 8), 6);
+        h.opacity = lerp(i, 20, 45);
+        return;
+      }
+      case "olhosTrocarCor":
+      case "batomTrocarCor":
+        await bp([{
+          _obj: "make",
+          _target: [{ _ref: "adjustmentLayer" }],
+          using: {
+            _obj: "adjustmentLayer",
+            type: {
+              _obj: "hueSaturation",
+              colorize: false,
+              adjustment: [{ _obj: "hueSatAdjustmentV2", hue: rnd(lerp(i, -24, 24)), saturation: 8 }]
+            },
+            name: "XT · " + ATOM[key].label
+          }
+        }]);
+        return;
+      default: {
+        var x = await stamp(doc, "XT · " + (ATOM[key] ? ATOM[key].label : key));
+        try { await acr(i); } catch (e) { await adjVibrance(i); }
+      }
     }
   }
 
-  function needDoc() {
-    if (!app.documents.length) throw new Error("Abra um documento.");
-  }
-
-  async function play(title, descriptors) {
-    needDoc();
-    await core.executeAsModal(async function () {
-      for (var n = 0; n < descriptors.length; n++) {
-        try {
-          var d = descriptors[n];
-          if (!d._options) d._options = { dialogOptions: "dontDisplay" };
-          await action.batchPlay([d], {});
-        } catch (e) {}
-      }
-    }, { commandName: title });
-  }
-
   async function exportDoc(kind) {
-    needDoc();
-    const fs = uxp.storage.localFileSystem;
-    const isPng = kind === "png";
-    const file = await fs.getFileForSaving(isPng ? "xtreme.png" : "xtreme.jpg", { types: [isPng ? "png" : "jpg"] });
+    if (!app.documents.length) throw new Error("Abra um documento.");
+    var fs = uxp.storage.localFileSystem;
+    var isPng = kind === "png";
+    var file = await fs.getFileForSaving(isPng ? "xtreme.png" : "xtreme.jpg", { types: [isPng ? "png" : "jpg"] });
     if (!file) return;
     await core.executeAsModal(async function () {
       if (isPng) await app.activeDocument.saveAs.png(file);
@@ -483,78 +620,33 @@
   }
 
   async function runAtom(key) {
-    const def = ATOM[key];
+    var def = ATOM[key];
     try {
       if (def.exportKind) {
         if (def.exportKind === "save") {
-          needDoc();
+          if (!app.documents.length) throw new Error("Abra um documento.");
           await core.executeAsModal(async function () { await app.activeDocument.save(); }, { commandName: "Xtreme · Salvar" });
-        } else {
-          await exportDoc(def.exportKind);
-        }
+        } else await exportDoc(def.exportKind);
         setStatus(def.label);
         return;
       }
-      const recp = recipe(key, state.intensity);
-      setStatus("Aplicando " + recp.title + "…");
-      await play("Xtreme · " + recp.title, recp.descriptors);
-      setStatus(def.group + " · " + state.intensity + "%");
+      setStatus("Aplicando " + def.label + "…");
+      await runModal("Xtreme · " + def.label, async function (doc) {
+        await runKey(doc, key, state.intensity);
+      });
+      setStatus(def.label + " · " + state.intensity + "%");
     } catch (err) {
       setStatus(err.message || String(err), true);
     }
   }
-
-  async function runStack(label, stack) {
-    try {
-      needDoc();
-      setStatus(label + "…");
-      await core.executeAsModal(async function (ctx) {
-        const token = await ctx.hostControl.suspendHistory({
-          documentID: app.activeDocument.id,
-          name: "Xtreme · " + label
-        });
-        try {
-          for (let n = 0; n < stack.length; n++) {
-            const key = stack[n][0];
-            const intensity = stack[n][1];
-            if (ATOM[key] && ATOM[key].exportKind) continue;
-            const recp = recipe(key, intensity);
-            await action.batchPlay(recp.descriptors, { synchronousExecution: false, modalBehavior: "execute" });
-          }
-        } finally {
-          await ctx.hostControl.resumeHistory(token);
-        }
-      }, { commandName: "Xtreme · " + label });
-      setStatus(label + " · um passo");
-    } catch (err) {
-      setStatus(err.message || String(err), true);
-    }
-  }
-
 
   async function runLook() {
     try {
-      needDoc();
       var p = PROFILES[state.profile];
       setStatus("Deixando pronta · " + p.label + "…");
-      await core.executeAsModal(async function (ctx) {
-        var token = await ctx.hostControl.suspendHistory({
-          documentID: app.activeDocument.id,
-          name: "Xtreme · " + p.label
-        });
-        try {
-          var descriptors = lookDescriptors(state.profile, state.intensity);
-          for (var n = 0; n < descriptors.length; n++) {
-            try {
-              var d = descriptors[n];
-              if (!d._options) d._options = { dialogOptions: "dontDisplay" };
-              await action.batchPlay([d], {});
-            } catch (e) {}
-          }
-        } finally {
-          await ctx.hostControl.resumeHistory(token);
-        }
-      }, { commandName: "Xtreme · " + p.label });
+      await runModal("Xtreme · " + p.label, async function (doc) {
+        await look(doc, state.profile, state.intensity);
+      });
       setStatus(p.label + " · foto pronta · um undo");
     } catch (err) {
       setStatus(err.message || String(err), true);
@@ -563,15 +655,39 @@
 
   function loteCount() {
     var n = 0;
-    document.querySelectorAll("[data-lote]").forEach(function (cb) {
-      if (cb.checked) n += 1;
-    });
+    document.querySelectorAll("[data-lote]").forEach(function (cb) { if (cb.checked) n += 1; });
     return n;
   }
-
   function refreshLote() {
     var el = document.getElementById("runBatch");
     if (el) el.textContent = "Lote (" + loteCount() + ")";
+  }
+
+  async function runLote() {
+    var keys = [];
+    document.querySelectorAll("[data-lote]").forEach(function (cb) {
+      if (!cb.checked) return;
+      var key = cb.getAttribute("data-lote");
+      if (ATOM[key] && ATOM[key].exportKind) return;
+      keys.push(key);
+    });
+    if (!keys.length) {
+      await runLook();
+      return;
+    }
+    try {
+      setStatus("Lote · " + keys.length + " funções…");
+      await runModal("Xtreme · Lote", async function (doc) {
+        await look(doc, state.profile, state.intensity);
+        var extras = ["limparFundoExterna", "limparFundo", "grao", "glamourGlow", "superNitidez"];
+        for (var n = 0; n < extras.length; n++) {
+          if (keys.indexOf(extras[n]) >= 0) await runKey(doc, extras[n], state.intensity);
+        }
+      });
+      setStatus("Lote pronto · um undo");
+    } catch (err) {
+      setStatus(err.message || String(err), true);
+    }
   }
 
   function bind() {
@@ -583,7 +699,6 @@
         });
       });
     });
-
     var range = document.getElementById("intensity");
     if (range) {
       range.addEventListener("input", function (e) {
@@ -591,17 +706,12 @@
         document.getElementById("intVal").textContent = String(state.intensity);
       });
     }
-
     document.querySelectorAll("[data-recipe]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        runAtom(btn.getAttribute("data-recipe"));
-      });
+      btn.addEventListener("click", function () { runAtom(btn.getAttribute("data-recipe")); });
     });
-
     document.querySelectorAll("[data-lote]").forEach(function (cb) {
       cb.addEventListener("change", refreshLote);
     });
-
     document.querySelectorAll("[data-lote-sec]").forEach(function (tog) {
       tog.addEventListener("click", function () {
         var boxes = [];
@@ -617,22 +727,11 @@
         refreshLote();
       });
     });
-
-    document.getElementById("applyProfile").addEventListener("click", function () {
-      runLook();
-    });
-
-    document.getElementById("runBatch").addEventListener("click", function () {
-      runLook();
-    });
-
+    document.getElementById("applyProfile").addEventListener("click", function () { runLook(); });
+    document.getElementById("runBatch").addEventListener("click", function () { runLote(); });
     refreshLote();
-    setStatus("Pronto · um clique deixa a foto pronta");
+    setStatus("Pronto · píxeis, não pastas");
   }
 
-  try {
-    bind();
-  } catch (err) {
-    setStatus("Falha ao ligar UI: " + err.message, true);
-  }
+  try { bind(); } catch (err) { setStatus("Falha ao ligar UI: " + err.message, true); }
 })();
