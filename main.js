@@ -797,22 +797,71 @@
     }]);
   }
 
-  async function colorGradePro(doc, i) {
-    var profile = (state && state.profile) || "casamento";
-    var look = ACR_LOOK[profile] || {};
-    await stamp(doc, "XT · Camera Raw");
-    await toSmartObject();
-    var ok = await acr(i, look);
-    if (!ok) await adjVibrance(i, "XT · Vibrance", null);
+  async function acrAuto() {
+    var tries = [
+      { _obj: "Adobe Camera Raw Filter", "$CrVe": "17.0", "$PrVN": 6, "$PrVe": 184549376, "$Au12": true },
+      { _obj: "Adobe Camera Raw Filter", "$CrVe": "16.0", "$PrVN": 6, "$PrVe": 184549376, "$Au12": true },
+      { _obj: "Adobe Camera Raw Filter", "$CrVe": "15.4", "$PrVN": 5, "$PrVe": 184549376, "$Au12": true },
+      { _obj: "Adobe Camera Raw Filter", "$CrVe": "15.4", "$PrVN": 5, "$PrVe": 184549376, "$Auto": true },
+      { _obj: "Adobe Camera Raw Filter", "$CrVe": "15.4", "$PrVN": 5, "$PrVe": 184549376, autoNeutral: true }
+    ];
+    for (var n = 0; n < tries.length; n++) {
+      if (await bp([tries[n]])) return true;
+    }
+    return false;
+  }
 
-    await makeExposure(i);
-    await makeLevels(i);
-    await makeCurvesGrade(i);
-    await adjVibrance(i, "XT · Vibrance", null);
-    await makeHueSat(i);
-    await makeSelective(i);
-    await makeBalance(i);
-    await adjWarm(Math.max(10, i * 0.45), null);
+  async function makeLevelsAuto() {
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: { _obj: "levels", presetKind: { _enum: "presetKindType", _value: "presetKindDefault" } },
+        name: "XT · Níveis Auto"
+      }
+    }]);
+    await bp([{
+      _obj: "set",
+      _target: [{ _ref: "adjustmentLayer", _enum: "ordinal", _value: "targetEnum" }],
+      to: {
+        _obj: "levels",
+        auto: true,
+        autoOptions: {
+          _obj: "autoOptions",
+          algorithm: { _enum: "autoAlgorithm", _value: "enhancedDecreaseA" },
+          shadows: 0.001,
+          highlights: 0.001
+        }
+      }
+    }]);
+  }
+
+  async function colorGradePro(doc, i) {
+    var raw = await stamp(doc, "XT · Camera Raw Auto");
+    await toSmartObject();
+    var usedAcr = await acrAuto();
+    if (!usedAcr) {
+      await bp([{ _obj: "autoColor" }]);
+      await bp([{ _obj: "autoContrast" }]);
+    }
+    try { (raw || doc.activeLayers[0]).opacity = lerp(i, 36, 58); } catch (e) {
+      try { doc.activeLayers[0].opacity = lerp(i, 36, 58); } catch (e2) {}
+    }
+
+    await makeLevelsAuto();
+    try { doc.activeLayers[0].opacity = lerp(i, 28, 48); } catch (e) {}
+
+    await bp([{
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: { _obj: "vibrance", vibrance: rnd(lerp(i, 5, 12)), saturation: rnd(lerp(i, 0, 3)) },
+        name: "XT · Vibrance"
+      }
+    }]);
+    try { doc.activeLayers[0].opacity = lerp(i, 45, 70); } catch (e) {}
   }
 
   async function adjVibrance(i, name, maskKind) {
