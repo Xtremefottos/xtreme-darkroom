@@ -669,12 +669,28 @@
     try { await deselect(); } catch (e) {}
   }
 
-  async function freqSep(doc, radius) {
-    var hf = await stamp(doc, "XT · HF");
-    await hf.duplicate();
-    var lf = doc.activeLayers[0];
-    lf.name = "XT · LF";
-    await gauss(lf, radius);
+  async function freqSep(doc, i) {
+    var w = 3000, h = 4000;
+    try {
+      w = doc.width && doc.width.value != null ? doc.width.value : doc.width;
+      h = doc.height && doc.height.value != null ? doc.height.value : doc.height;
+    } catch (e) {}
+    var minSide = Math.min(Number(w) || 3000, Number(h) || 4000);
+    var radius = Math.max(5, Math.min(30, lerp(i, minSide / 420, minSide / 220)));
+
+    var lf = await stamp(doc, "XT · LF");
+    var hf = null;
+    try {
+      hf = await lf.duplicate();
+    } catch (e) {
+      await bp([{ _obj: "duplicate", _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }] }]);
+      hf = doc.activeLayers[0];
+    }
+    try { hf.name = "XT · HF"; } catch (e) {}
+
+    await bp([{ _obj: "select", _target: [{ _ref: "layer", _name: "XT · LF" }], makeVisible: false }]);
+    await gauss(doc.activeLayers[0], radius);
+
     await bp([{ _obj: "select", _target: [{ _ref: "layer", _name: "XT · HF" }], makeVisible: false }]);
     var apply = is16(doc)
       ? {
@@ -701,7 +717,26 @@
         };
     await bp([apply]);
     await setBlend(doc.activeLayers[0], "linearLight");
-    await addMask("reveal");
+    try { doc.activeLayers[0].opacity = 100; } catch (e) {}
+
+    try {
+      if (hf && lf && typeof hf.moveAbove === "function") await hf.moveAbove(lf);
+    } catch (e) {
+      try {
+        await bp([{
+          _obj: "move",
+          _target: [{ _ref: "layer", _name: "XT · HF" }],
+          to: { _ref: "layer", _name: "XT · LF" },
+          adjustment: false,
+          version: 5
+        }]);
+      } catch (e2) {}
+    }
+
+    await bp([{ _obj: "select", _target: [{ _ref: "layer", _name: "XT · LF" }], makeVisible: false }]);
+    await finishMask("skin");
+    await bp([{ _obj: "select", _target: [{ _ref: "layer", _name: "XT · HF" }], makeVisible: false }]);
+    await finishMask("skin");
   }
 
   async function neuralSkin(doc, i) {
@@ -824,7 +859,8 @@
         return;
       case "freqSep":
       case "texturaPele":
-        await freqSep(doc, lerp(i, 3.5, 10));
+        await freqSep(doc, i);
+        return;
         return;
       case "extratorDetalhes": {
         var e = await stamp(doc, "XT · Extrator");
