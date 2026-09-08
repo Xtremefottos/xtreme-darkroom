@@ -103,55 +103,213 @@
     externa: { label: "Externa", stack: [["pelePerfeita", 32], ["limparFundoExterna", 55], ["destaque", 28], ["dodge", 22], ["contrasteFinal", 24]] }
   };
 
-  function scale(i, min, max) { return min + (max - min) * (i / 100); }
-  function GROUP(name) {
-    return { _obj: "make", _target: [{ _ref: "layerSection" }], using: { _obj: "layerSection", name: name } };
-  }
-  function DUPLICATE(name) {
-    return { _obj: "duplicate", _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }], name: name };
-  }
-  function setBlend(mode) {
-    return { _obj: "set", _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }], to: { _obj: "layer", mode: { _enum: "blendMode", _value: mode } } };
-  }
-  function setOpacity(pct) {
-    return { _obj: "set", _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }], to: { _obj: "layer", opacity: { _unit: "percentUnit", _value: pct } } };
-  }
-  function gaussianBlur(radius) {
-    return { _obj: "gaussianBlur", radius: { _unit: "pixelsUnit", _value: radius } };
-  }
-  function highPass(radius) {
-    return { _obj: "highPass", radius: { _unit: "pixelsUnit", _value: radius } };
-  }
-  function solidFill(r, g, b, name) {
-    return {
-      _obj: "make",
-      _target: [{ _ref: "contentLayer" }],
-      using: {
-        _obj: "contentLayer",
-        type: { _obj: "solidColorLayer", color: { _obj: "RGBColor", red: r, grain: g, blue: b } },
-        name: name
-      }
-    };
-  }
 
+  function scale(i, min, max) { return min + (max - min) * (i / 100); }
+  function rnd(n) { return Math.round(n); }
+  function D(obj) {
+    obj._options = { dialogOptions: "dontDisplay" };
+    return obj;
+  }
+  function stamp(name) {
+    return [
+      D({ _obj: "mergeVisible", duplicate: true }),
+      D({
+        _obj: "set",
+        _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+        to: { _obj: "layer", name: name }
+      })
+    ];
+  }
+  function opacity(pct) {
+    return D({
+      _obj: "set",
+      _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+      to: { _obj: "layer", opacity: { _unit: "percentUnit", _value: pct } }
+    });
+  }
+  function blend(mode) {
+    return D({
+      _obj: "set",
+      _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+      to: { _obj: "layer", mode: { _enum: "blendMode", _value: mode } }
+    });
+  }
+  function acr(i, extra) {
+    extra = extra || {};
+    var t = i / 100;
+    return D({
+      _obj: "Adobe Camera Raw Filter",
+      "$CrVe": "15.4",
+      "$PrVN": 5,
+      "$PrVe": 184549376,
+      "$Ex12": extra.ex != null ? extra.ex : 0.08 + t * 0.12,
+      "$Cr12": extra.cr != null ? extra.cr : rnd(8 + t * 14),
+      "$Hi12": extra.hi != null ? extra.hi : rnd(-18 - t * 18),
+      "$Sh12": extra.sh != null ? extra.sh : rnd(14 + t * 16),
+      "$Wh12": extra.wh != null ? extra.wh : rnd(4 + t * 8),
+      "$Bk12": extra.bk != null ? extra.bk : rnd(-6 - t * 6),
+      "$Cl12": extra.cl != null ? extra.cl : rnd(-10 - t * 16),
+      "$Vibr": extra.vi != null ? extra.vi : rnd(10 + t * 10),
+      "$Strt": extra.st != null ? extra.st : rnd(2 + t * 4),
+      "$Temp": extra.te != null ? extra.te : rnd(5 + t * 8)
+    });
+  }
+  function surface(i) {
+    return D({
+      _obj: "surfaceBlur",
+      radius: { _unit: "pixelsUnit", _value: scale(i, 8, 26) },
+      threshold: rnd(scale(i, 8, 20))
+    });
+  }
+  function gauss(r) {
+    return D({ _obj: "gaussianBlur", radius: { _unit: "pixelsUnit", _value: r } });
+  }
+  function highPass(r) {
+    return D({ _obj: "highPass", radius: { _unit: "pixelsUnit", _value: r } });
+  }
+  function unsharp(amt, rad) {
+    return D({
+      _obj: "unsharpMask",
+      amount: { _unit: "percentUnit", _value: amt },
+      radius: { _unit: "pixelsUnit", _value: rad },
+      threshold: 3
+    });
+  }
+  function shadowsHighlights(i) {
+    return D({
+      _obj: "shadowHighlight",
+      shadowAmount: rnd(scale(i, 8, 22)),
+      shadowWidth: 50,
+      shadowRadius: 30,
+      highlightAmount: rnd(scale(i, 6, 16)),
+      highlightWidth: 50,
+      highlightRadius: 30,
+      colorCorrection: 15,
+      midtoneContrast: rnd(scale(i, 2, 8)),
+      blackClip: 0.01,
+      whiteClip: 0.01
+    });
+  }
+  function photoWarm(i) {
+    return D({
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "photoFilter",
+          color: { _obj: "RGBColor", red: 236, grain: 138, blue: 0 },
+          density: rnd(scale(i, 6, 16)),
+          preserveLuminosity: true
+        },
+        name: "XT · Tom quente"
+      }
+    });
+  }
+  function vibranceAdj(i) {
+    return D({
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "vibrance",
+          vibrance: rnd(scale(i, 8, 22)),
+          saturation: rnd(scale(i, 1, 6))
+        },
+        name: "XT · Vibrance"
+      }
+    });
+  }
+  function hueYellows(i) {
+    return D({
+      _obj: "make",
+      _target: [{ _ref: "adjustmentLayer" }],
+      using: {
+        _obj: "adjustmentLayer",
+        type: {
+          _obj: "hueSaturation",
+          colorize: false,
+          adjustment: [
+            { _obj: "hueSatAdjustmentV2" },
+            {
+              _obj: "hueSatAdjustmentV2",
+              localRange: 1,
+              beginRamp: 15,
+              beginSustain: 45,
+              endSustain: 75,
+              endRamp: 105,
+              hue: 0,
+              saturation: rnd(scale(i, -10, -22)),
+              lightness: rnd(scale(i, 3, 10))
+            }
+          ]
+        },
+        name: "XT · Dentes"
+      }
+    });
+  }
+  function subject() { return D({ _obj: "autoCutout", sampleAllLayers: true }); }
+  function inverse() { return D({ _obj: "inverse" }); }
+  function deselect() {
+    return D({
+      _obj: "set",
+      _target: [{ _ref: "channel", _property: "selection" }],
+      to: { _enum: "ordinal", _value: "none" }
+    });
+  }
   function rec(title, descriptors) { return { title: title, descriptors: descriptors }; }
 
-  function basic(group, i, blend, opMin, opMax) {
-    return rec(group.replace("XT · ", ""), [
-      GROUP(group),
-      DUPLICATE(group + " · base"),
-      setBlend(blend),
-      setOpacity(scale(i, opMin, opMax))
-    ]);
-  }
+  var ACR_LOOK = {
+    casamento: { cl: -18, vi: 14, te: 8, hi: -22, sh: 18, cr: 12 },
+    quinze: { cl: -22, vi: 20, te: 12, cr: 16, hi: -18, sh: 16 },
+    corporativo: { cl: -8, vi: 8, te: 2, cr: 12, hi: -12, sh: 10 },
+    beauty: { cl: -26, vi: 16, te: 6, cr: 10, hi: -16, sh: 14 },
+    newborn: { cl: -24, cr: 4, vi: 8, te: 14, hi: -8, sh: 22, ex: 0.12 },
+    externa: { cl: -12, vi: 12, te: 6, cr: 14, hi: -20, sh: 16 }
+  };
 
-  function gray(group, i, r, g, b, blend) {
-    return rec(group.replace("XT · ", ""), [
-      GROUP(group),
-      solidFill(r, g, b, group + " · fill"),
-      setBlend(blend),
-      setOpacity(scale(i, 18, 62))
-    ]);
+  function lookDescriptors(id, i) {
+    var d = [];
+    d = d.concat(stamp("XT · " + (PROFILES[id] ? PROFILES[id].label : "Look")));
+    d.push(acr(i, ACR_LOOK[id] || {}));
+    d = d.concat(stamp("XT · Pele"));
+    d.push(surface(id === "beauty" ? Math.min(100, i + 12) : id === "corporativo" ? i * 0.75 : i));
+    d.push(opacity(id === "newborn" ? scale(i, 22, 40) : scale(i, 32, 55)));
+    if (id === "quinze" || id === "beauty") {
+      d = d.concat(stamp("XT · Glow"));
+      d.push(gauss(scale(i, 8, 18)));
+      d.push(blend("screen"));
+      d.push(opacity(scale(i, 10, 24)));
+    }
+    if (id !== "newborn") {
+      d = d.concat(stamp("XT · Nitidez"));
+      d.push(unsharp(scale(i, 35, 72), 1.15));
+      d.push(opacity(scale(i, 42, 72)));
+    }
+    d.push(photoWarm(id === "corporativo" ? i * 0.5 : i));
+    d.push(vibranceAdj(i));
+    if (id === "externa") {
+      d.push(subject());
+      d.push(inverse());
+      d = d.concat(stamp("XT · Fundo externa"));
+      d.push(gauss(scale(i, 12, 28)));
+      d.push(opacity(scale(i, 60, 88)));
+      d.push(deselect());
+    }
+    if (id === "casamento" || id === "corporativo") {
+      d.push(subject());
+      d.push(inverse());
+      d = d.concat(stamp("XT · Fundo"));
+      d.push(D({
+        _obj: "brightnessEvent",
+        brightness: rnd(scale(i, 2, 8)),
+        contrast: rnd(scale(i, 2, 10)),
+        useLegacy: false
+      }));
+      d.push(deselect());
+    }
+    return d;
   }
 
   function recipe(key, i) {
@@ -161,76 +319,137 @@
       case "peleDoBruxo":
       case "remManchas":
       case "mesclagem":
+        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([surface(i), opacity(scale(i, 28, 62))]));
       case "remCabeloRosto":
-        return rec(ATOM[key].label, [GROUP(ATOM[key].group), DUPLICATE(ATOM[key].group + " · heal"), gaussianBlur(scale(i, 1.4, 6)), setOpacity(scale(i, 28, 80))]);
+        return rec("Cabelo", stamp("XT · Cabelo").concat([
+          D({ _obj: "dustAndScratches", radius: rnd(scale(i, 2, 6)), threshold: 8 }),
+          opacity(scale(i, 20, 45))
+        ]));
       case "freqSep":
       case "texturaPele":
       case "extratorDetalhes":
-        return rec(ATOM[key].label, [GROUP(ATOM[key].group), DUPLICATE(ATOM[key].group + " · cor"), gaussianBlur(scale(i, 3, 12)), DUPLICATE(ATOM[key].group + " · textura"), highPass(scale(i, 1.2, 4)), setBlend("linearLight"), setOpacity(scale(i, 35, 80))]);
+        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
+          highPass(scale(i, 1.2, 2.8)),
+          blend("overlay"),
+          opacity(scale(i, 18, 48))
+        ]));
       case "dodgeBurn":
-        return rec("D&B", [GROUP("XT · D&B"), solidFill(128, 128, 128, "XT · Dodge"), setBlend("softLight"), setOpacity(scale(i, 20, 70)), solidFill(128, 128, 128, "XT · Burn"), setBlend("softLight"), setOpacity(scale(i, 20, 70))]);
       case "dodge":
       case "dbOlhos":
-        return gray(ATOM[key].group, i, 160, 160, 160, "softLight");
+      case "dbCurvas":
+      case "solarCurve":
+        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
+          shadowsHighlights(i),
+          blend("softLight"),
+          opacity(scale(i, 40, 85))
+        ]));
       case "burn":
-      case "olhosContorno":
       case "escurecer":
       case "contrasteFundo":
-        return gray(ATOM[key].group, i, 40, 36, 32, "multiply");
+      case "luzBaixa":
+        return rec(ATOM[key].label, [subject(), inverse()].concat(stamp(ATOM[key].group), [
+          D({
+            _obj: "brightnessEvent",
+            brightness: rnd(scale(i, -8, -22)),
+            contrast: rnd(scale(i, 4, 14)),
+            useLegacy: false
+          }),
+          deselect()
+        ]));
       case "eyes":
       case "olhosMagicos":
-        return rec(ATOM[key].label, [GROUP(ATOM[key].group), DUPLICATE(ATOM[key].group + " · íris"), setBlend("softLight"), setOpacity(scale(i, 15, 55)), DUPLICATE(ATOM[key].group + " · catch"), setBlend("screen"), setOpacity(scale(i, 8, 28))]);
-      case "teeth":
-      case "dentesBrancos":
-        return basic(ATOM[key].group, i, "luminosity", 10, 45);
-      case "grade":
-      case "contrasteFinal":
-      case "solarCurve":
-      case "dbCurvas":
-        return basic(ATOM[key].group, i, "softLight", 8, 40);
-      case "glamourGlow":
-        return rec("Glow", [GROUP("XT · Glow"), DUPLICATE("XT · Glow · orton"), gaussianBlur(scale(i, 6, 18)), setBlend("screen"), setOpacity(scale(i, 12, 40))]);
-      case "tomPele":
-      case "corIndireta":
-        return gray(ATOM[key].group, i, 180, 140, 110, "softLight");
-      case "copiarCores":
-        return basic("XT · Copiar cores", i, "color", 12, 40);
-      case "limparFundo":
-        return gray("XT · Fundo limpo", i, 18, 16, 14, "multiply");
-      case "limparFundoExterna":
-        return rec("Fundo externa", [
-          GROUP("XT · Fundo externa"),
-          { _obj: "selectSubject", sampleAllLayers: false },
-          { _obj: "inverse" },
-          DUPLICATE("XT · Bokeh"),
-          gaussianBlur(scale(i, 8, 28)),
-          setOpacity(scale(i, 45, 90)),
-          { _obj: "set", _target: [{ _ref: "channel", _property: "selection" }], to: { _enum: "ordinal", _value: "none" } }
-        ]);
-      case "colorirFundo":
-        return gray("XT · Fundo cor", i, 92, 64, 48, "color");
-      case "checkLayer":
-        return rec("Check", [GROUP("XT · Check"), DUPLICATE("XT · Check · pb"), { _obj: "blackAndWhite" }, setOpacity(scale(i, 40, 100))]);
-      case "olhosTrocarCor":
-      case "batomTrocarCor":
-        return gray(ATOM[key].group, i, 70, 90, 140, "color");
+        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
+          unsharp(scale(i, 40, 90), 1.3),
+          blend("softLight"),
+          opacity(scale(i, 22, 50))
+        ]));
       case "olhosNitidez":
       case "nitidez12":
       case "superNitidez":
-        return rec(ATOM[key].label, [GROUP(ATOM[key].group), DUPLICATE(ATOM[key].group + " · hp"), highPass(scale(i, 0.8, 2.4)), setBlend("overlay"), setOpacity(scale(i, 14, 42))]);
+        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([
+          unsharp(key === "superNitidez" ? scale(i, 70, 140) : scale(i, 35, 80), key === "superNitidez" ? 1.6 : 1.1),
+          opacity(scale(i, 40, 85))
+        ]));
+      case "teeth":
+      case "dentesBrancos":
+        return rec(ATOM[key].label, [hueYellows(i)]);
+      case "grade":
+      case "contrasteFinal":
+        return rec(ATOM[key].label, stamp(ATOM[key].group).concat([acr(i)]));
+      case "glamourGlow":
+        return rec("Glow", stamp("XT · Glow").concat([gauss(scale(i, 8, 22)), blend("screen"), opacity(scale(i, 12, 32))]));
+      case "tomPele":
+      case "corIndireta":
+        return rec(ATOM[key].label, [photoWarm(i)]);
+      case "copiarCores":
+        return rec("Copiar cores", [vibranceAdj(i)]);
+      case "limparFundo":
+        return rec("Fundo estúdio", [subject(), inverse()].concat(stamp("XT · Fundo limpo"), [
+          D({
+            _obj: "hueSaturation",
+            colorize: false,
+            adjustment: [{ _obj: "hueSatAdjustmentV2", saturation: rnd(scale(i, -20, -50)), lightness: rnd(scale(i, 4, 14)) }]
+          }),
+          deselect()
+        ]));
+      case "limparFundoExterna":
+        return rec("Fundo externa", [subject(), inverse()].concat(stamp("XT · Fundo externa"), [
+          gauss(scale(i, 10, 32)),
+          opacity(scale(i, 55, 90)),
+          deselect()
+        ]));
+      case "colorirFundo":
+        return rec("Fundo cor", [subject(), inverse()].concat(stamp("XT · Fundo cor"), [photoWarm(Math.min(100, i + 20)), deselect()]));
+      case "checkLayer":
+        return rec("Check", stamp("XT · Check").concat([
+          D({ _obj: "blackAndWhite", presetKind: { _enum: "presetKindType", _value: "presetKindDefault" } }),
+          opacity(scale(i, 50, 100))
+        ]));
+      case "olhosTrocarCor":
+      case "batomTrocarCor":
+        return rec(ATOM[key].label, [D({
+          _obj: "make",
+          _target: [{ _ref: "adjustmentLayer" }],
+          using: {
+            _obj: "adjustmentLayer",
+            type: {
+              _obj: "hueSaturation",
+              colorize: false,
+              adjustment: [{ _obj: "hueSatAdjustmentV2", hue: rnd(scale(i, -24, 24)), saturation: 8 }]
+            },
+            name: ATOM[key].group
+          }
+        })]);
+      case "olhosContorno":
+        return rec("Contorno", stamp("XT · Contorno olhos").concat([highPass(scale(i, 1.5, 3.5)), blend("overlay"), opacity(scale(i, 18, 40))]));
       case "batom":
       case "volumeBatom":
-        return gray(ATOM[key].group, i, 120, 28, 32, "multiply");
+        return rec(ATOM[key].label, [vibranceAdj(i)]);
       case "grao":
-        return rec("Grão", [GROUP("XT · Grão"), DUPLICATE("XT · Grão · noise"), { _obj: "addNoise", amount: { _unit: "percentUnit", _value: scale(i, 2, 8) }, distribution: { _enum: "distribution", _value: "gaussian" }, monochromatic: true }, setBlend("overlay"), setOpacity(scale(i, 12, 45))]);
+        return rec("Grão", stamp("XT · Grão").concat([
+          D({
+            _obj: "addNoise",
+            amount: { _unit: "percentUnit", _value: scale(i, 2, 7) },
+            distribution: { _enum: "distribution", _value: "gaussian" },
+            monochromatic: true
+          }),
+          blend("overlay"),
+          opacity(scale(i, 18, 42))
+        ]));
       case "desfoque":
-        return rec("Desfoque", [GROUP("XT · Desfoque"), DUPLICATE("XT · Desfoque · blur"), gaussianBlur(scale(i, 4, 16)), setOpacity(scale(i, 20, 50))]);
+        return rec("Desfoque", [subject(), inverse()].concat(stamp("XT · Desfoque"), [gauss(scale(i, 6, 22)), opacity(scale(i, 40, 80)), deselect()]));
       case "destaque":
-        return basic("XT · Destaque", i, "softLight", 16, 40);
-      case "luzBaixa":
-        return gray("XT · Luz baixa", i, 20, 18, 16, "multiply");
+        return rec("Destaque", [subject()].concat(stamp("XT · Destaque"), [
+          D({
+            _obj: "brightnessEvent",
+            brightness: rnd(scale(i, 4, 14)),
+            contrast: rnd(scale(i, 2, 10)),
+            useLegacy: false
+          }),
+          deselect()
+        ]));
       default:
-        return rec(ATOM[key] ? ATOM[key].label : key, [GROUP(ATOM[key] ? ATOM[key].group : "XT · " + key), DUPLICATE("XT · base"), setOpacity(scale(i, 20, 60))]);
+        return rec(ATOM[key] ? ATOM[key].label : key, stamp(ATOM[key] ? ATOM[key].group : "XT · Look").concat([acr(i)]));
     }
   }
 
@@ -241,7 +460,13 @@
   async function play(title, descriptors) {
     needDoc();
     await core.executeAsModal(async function () {
-      await action.batchPlay(descriptors, { synchronousExecution: false, modalBehavior: "execute" });
+      for (var n = 0; n < descriptors.length; n++) {
+        try {
+          var d = descriptors[n];
+          if (!d._options) d._options = { dialogOptions: "dontDisplay" };
+          await action.batchPlay([d], {});
+        } catch (e) {}
+      }
     }, { commandName: title });
   }
 
@@ -306,6 +531,36 @@
     }
   }
 
+
+  async function runLook() {
+    try {
+      needDoc();
+      var p = PROFILES[state.profile];
+      setStatus("Deixando pronta · " + p.label + "…");
+      await core.executeAsModal(async function (ctx) {
+        var token = await ctx.hostControl.suspendHistory({
+          documentID: app.activeDocument.id,
+          name: "Xtreme · " + p.label
+        });
+        try {
+          var descriptors = lookDescriptors(state.profile, state.intensity);
+          for (var n = 0; n < descriptors.length; n++) {
+            try {
+              var d = descriptors[n];
+              if (!d._options) d._options = { dialogOptions: "dontDisplay" };
+              await action.batchPlay([d], {});
+            } catch (e) {}
+          }
+        } finally {
+          await ctx.hostControl.resumeHistory(token);
+        }
+      }, { commandName: "Xtreme · " + p.label });
+      setStatus(p.label + " · foto pronta · um undo");
+    } catch (err) {
+      setStatus(err.message || String(err), true);
+    }
+  }
+
   function loteCount() {
     var n = 0;
     document.querySelectorAll("[data-lote]").forEach(function (cb) {
@@ -349,7 +604,6 @@
 
     document.querySelectorAll("[data-lote-sec]").forEach(function (tog) {
       tog.addEventListener("click", function () {
-        var sec = tog.parentElement.nextElementSibling;
         var boxes = [];
         var node = tog.parentElement.nextElementSibling;
         while (node && node.className === "tool") {
@@ -365,27 +619,15 @@
     });
 
     document.getElementById("applyProfile").addEventListener("click", function () {
-      var p = PROFILES[state.profile];
-      runStack(p.label, p.stack);
+      runLook();
     });
 
     document.getElementById("runBatch").addEventListener("click", function () {
-      var stack = [];
-      document.querySelectorAll("[data-lote]").forEach(function (cb) {
-        if (!cb.checked) return;
-        var key = cb.getAttribute("data-lote");
-        if (ATOM[key] && ATOM[key].exportKind) return;
-        stack.push([key, state.intensity]);
-      });
-      if (!stack.length) {
-        setStatus("Marque funções no lote", true);
-        return;
-      }
-      runStack("Lote", stack);
+      runLook();
     });
 
     refreshLote();
-    setStatus("Pronto · " + ATOMS.length + " funções");
+    setStatus("Pronto · um clique deixa a foto pronta");
   }
 
   try {
