@@ -1738,7 +1738,32 @@
 
   function listDocs() {
     var docs = [];
-    for (var i = 0; i < app.documents.length; i++) docs.push(app.documents[i]);
+    var seen = {};
+    function add(d) {
+      if (!d) return;
+      var id = null;
+      try { id = d.id; } catch (e) {}
+      if (id == null || seen[id]) return;
+      seen[id] = true;
+      docs.push(d);
+    }
+    try {
+      var col = app.documents;
+      var n = col.length;
+      for (var i = 0; i < n; i++) {
+        try { add(col[i]); } catch (e) {}
+      }
+    } catch (e) {}
+    if (!docs.length) {
+      try {
+        if (typeof app.documents.forEach === "function") {
+          app.documents.forEach(function (d) { add(d); });
+        }
+      } catch (e2) {}
+    }
+    if (!docs.length) {
+      try { add(app.activeDocument); } catch (e3) {}
+    }
     return docs;
   }
 
@@ -1805,6 +1830,7 @@
   var afterMap = {};
   var thumbMap = {};
   var filmBusy = false;
+  var filmQueued = false;
   var comparePct = 50;
 
   function docLabel(doc) {
@@ -1821,22 +1847,53 @@
     if (range && Number(range.value) !== comparePct) range.value = String(comparePct);
   }
 
-  async function snapDoc(doc, size) {
-    if (!imaging || !doc) return null;
+  async function runRead(fn) {
     try {
-      var pix = await imaging.getPixels({
-        documentID: doc.id,
-        componentSize: 8,
-        applyAlpha: true,
-        targetSize: { width: size }
+      if (typeof core.isModal === "function" && core.isModal()) return await fn();
+    } catch (e) {}
+    return await core.executeAsModal(fn, { commandName: "Xtreme · Preview" });
+  }
+
+  function toDataUrl(encoded) {
+    if (!encoded) return null;
+    if (typeof encoded === "string") {
+      if (encoded.indexOf("data:") === 0) return encoded;
+      return "data:image/jpeg;base64," + encoded;
+    }
+    if (encoded.base64) return "data:image/jpeg;base64," + encoded.base64;
+    try {
+      var u8 = encoded instanceof Uint8Array ? encoded : new Uint8Array(encoded);
+      if (!u8.length) return null;
+      var s = "";
+      var step = 0x8000;
+      for (var i = 0; i < u8.length; i += step) {
+        s += String.fromCharCode.apply(null, u8.subarray(i, i + step));
+      }
+      return "data:image/jpeg;base64," + btoa(s);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function snapDoc(doc, size) {
+    if (!doc) return null;
+    try {
+      var jpeg = await runRead(async function () {
+        if (!imaging) return null;
+        var pix = await imaging.getPixels({
+          documentID: doc.id,
+          componentSize: 8,
+          applyAlpha: true,
+          colorProfile: "sRGB IEC61966-2.1",
+          targetSize: { height: size || 280 }
+        });
+        var data = pix && pix.imageData;
+        if (!data) return null;
+        var encoded = await imaging.encodeImageData({ imageData: data, base64: true });
+        try { data.dispose(); } catch (e) {}
+        return encoded;
       });
-      var data = pix && pix.imageData;
-      if (!data) return null;
-      var encoded = await imaging.encodeImageData({ imageData: data, base64: true });
-      try { data.dispose(); } catch (e) {}
-      var b64 = typeof encoded === "string" ? encoded : (encoded && (encoded.base64 || encoded.data));
-      if (!b64) return null;
-      return "data:image/jpeg;base64," + b64;
+      return toDataUrl(jpeg);
     } catch (e) {
       return null;
     }
@@ -1847,7 +1904,7 @@
       if (!app.documents.length) return;
       var doc = app.activeDocument;
       if (beforeMap[doc.id]) return;
-      beforeMap[doc.id] = await snapDoc(doc, 720);
+      beforeMap[doc.id] = await snapDoc(doc, 320);
     } catch (e) {}
   }
 
@@ -1871,7 +1928,7 @@
       return;
     }
     document.getElementById("viewName").textContent = docLabel(doc);
-    var after = afterMap[doc.id] || thumbMap[doc.id] || await snapDoc(doc, 720);
+    var after = afterMap[doc.id] || thumbMap[doc.id] || await snapDoc(doc, 320);
     if (after) {
       afterMap[doc.id] = after;
       thumbMap[doc.id] = after;
@@ -1886,15 +1943,16 @@
   }
 
   async function refreshFilm(forceAfter) {
-    if (filmBusy) return;
+    if (filmBusy) {
+      filmQueued = true;
+      return;
+    }
     filmBusy = true;
     try {
       var strip = document.getElementById("filmStrip");
-      var countEl = document.getElementById("filmCount");
       if (!strip) return;
       var docs = [];
       try { docs = listDocs(); } catch (e) { docs = []; }
-      if (countEl) countEl.textContent = String(docs.length);
       if (!docs.length) {
         strip.innerHTML = '<div class="film-empty">Abra fotos no Photoshop — elas aparecem aqui</div>';
         setStageHint(true);
@@ -1932,7 +1990,7 @@
       try { active = app.activeDocument; } catch (e) {}
       if (active) {
         if (forceAfter || !afterMap[active.id]) {
-          var shot = await snapDoc(active, 720);
+          var shot = await snapDoc(active, 320);
           if (shot) {
             afterMap[active.id] = shot;
             thumbMap[active.id] = shot;
@@ -1941,10 +1999,10 @@
         if (!beforeMap[active.id] && afterMap[active.id]) beforeMap[active.id] = afterMap[active.id];
         await showViewer(active);
       }
-      for (var n = 0; n < docs.length && n < 12; n++) {
+      for (var n = 0; n < docs.length && n < 30; n++) {
         var d = docs[n];
         if (thumbMap[d.id]) continue;
-        var t = await snapDoc(d, 160);
+        var t = await snapDoc(d, 120);
         if (t) thumbMap[d.id] = t;
       }
       var cards = strip.querySelectorAll(".film-card");
@@ -1961,8 +2019,13 @@
         }
       }
     } catch (e) {
+      setStatus("Preview: " + (e.message || String(e)), true);
     } finally {
       filmBusy = false;
+      if (filmQueued) {
+        filmQueued = false;
+        refreshFilm(forceAfter);
+      }
     }
   }
 
