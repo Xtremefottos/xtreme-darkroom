@@ -179,3 +179,135 @@ footer {
   font-size: 11px;
 }
 footer.error { color: var(--danger); }
+
+.viewer-block { padding-bottom: 10px; }
+.film {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.film-empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 10px 4px;
+}
+.film-card {
+  flex: 0 0 auto;
+  width: 72px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #0a0908;
+  padding: 3px;
+}
+.film-card.active { border-color: var(--accent); }
+.film-card img {
+  display: block;
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  background: #1a1814;
+}
+.film-ph {
+  width: 100%;
+  height: 72px;
+  background: #1a1814;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.film-name {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.film-card.active .film-name { color: var(--text); }
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background: #080807;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  cursor: ew-resize;
+}
+.shot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}
+.shot.overlay { clip-path: inset(0 50% 0 0); }
+.split-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(232, 226, 214, 0.85);
+  pointer-events: none;
+  transform: translateX(-0.5px);
+}
+.split-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #e8e2d6;
+  background: #0c0b0a;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.stage-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.stage-hint.hide { display: none; }
+.compare-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.compare-bar input { flex: 1; margin: 0; }
+.view-name {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

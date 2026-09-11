@@ -15,6 +15,32 @@
   </header>
 
   <div class="scroll">
+    <section class="block viewer-block">
+      <div class="row between">
+        <span class="lbl">Fotos abertas</span>
+        <span class="val" id="filmCount">0</span>
+      </div>
+      <div class="film" id="filmStrip">
+        <div class="film-empty">Abra fotos no Photoshop — elas aparecem aqui</div>
+      </div>
+      <div class="stage" id="stage">
+        <img id="viewAfter" class="shot" alt="" />
+        <img id="viewBefore" class="shot overlay" alt="" />
+        <div class="split-line" id="splitLine"></div>
+        <div class="stage-hint" id="stageHint">Abra uma foto</div>
+      </div>
+      <div class="compare-bar">
+        <span>Antes</span>
+        <input id="compare" type="range" min="0" max="100" value="50" />
+        <span>Depois</span>
+      </div>
+      <div class="view-name" id="viewName"></div>
+      <div class="row actions">
+        <div class="ghost" id="captureBefore">Capturar antes</div>
+        <div class="ghost" id="refreshFilm">Atualizar</div>
+      </div>
+    </section>
+
     <section class="block">
       <div class="row between">
         <span class="lbl">Intensidade</span>

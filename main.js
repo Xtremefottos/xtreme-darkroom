@@ -22,6 +22,8 @@
   var app = photoshop.app;
   var constants = null;
   try { constants = photoshop.constants; } catch (e) {}
+  var imaging = null;
+  try { imaging = photoshop.imaging; } catch (e) {}
   var uxp = require("uxp");
 
   var state = { profile: "casamento", intensity: 50 };
@@ -1682,10 +1684,12 @@
         return;
       }
       setStatus("Aplicando " + def.label + "…");
+      await snapshotBeforeActive();
       await runModal("Xtreme · " + def.label, async function (doc) {
         await runKey(doc, key, state.intensity);
       });
       setStatus(def.label + " · " + state.intensity + "%");
+      snapshotAfterActive();
     } catch (err) {
       setStatus(err.message || String(err), true);
     }
@@ -1699,10 +1703,12 @@
     }
     try {
       setStatus("Foto atual · " + keys.length + " funções…");
+      await snapshotBeforeActive();
       await runModal("Xtreme · Foto pronta", async function (doc) {
         await applyKeysToDoc(doc, keys, state.intensity);
       });
       setStatus("Foto pronta · " + keys.length + " · um undo");
+      snapshotAfterActive();
     } catch (err) {
       setStatus(err.message || String(err), true);
     }
@@ -1789,9 +1795,213 @@
         }
         setStatus("Lote · " + ok + " fotos" + (fail ? " · " + fail + " falhas" : "") + " · um undo cada");
       }, { commandName: "Xtreme · Lote todas" });
+      snapshotAfterActive();
     } catch (err) {
       setStatus(err.message || String(err), true);
     }
+  }
+
+  var beforeMap = {};
+  var afterMap = {};
+  var thumbMap = {};
+  var filmBusy = false;
+  var comparePct = 50;
+
+  function docLabel(doc) {
+    try { return doc.title || doc.name || "Foto"; } catch (e) { return "Foto"; }
+  }
+
+  function applySplit(pct) {
+    comparePct = Math.max(0, Math.min(100, Number(pct) || 0));
+    var before = document.getElementById("viewBefore");
+    var line = document.getElementById("splitLine");
+    if (before) before.style.clipPath = "inset(0 " + (100 - comparePct) + "% 0 0)";
+    if (line) line.style.left = comparePct + "%";
+    var range = document.getElementById("compare");
+    if (range && Number(range.value) !== comparePct) range.value = String(comparePct);
+  }
+
+  async function snapDoc(doc, size) {
+    if (!imaging || !doc) return null;
+    try {
+      var pix = await imaging.getPixels({
+        documentID: doc.id,
+        componentSize: 8,
+        applyAlpha: true,
+        targetSize: { width: size }
+      });
+      var data = pix && pix.imageData;
+      if (!data) return null;
+      var encoded = await imaging.encodeImageData({ imageData: data, base64: true });
+      try { data.dispose(); } catch (e) {}
+      var b64 = typeof encoded === "string" ? encoded : (encoded && (encoded.base64 || encoded.data));
+      if (!b64) return null;
+      return "data:image/jpeg;base64," + b64;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function snapshotBeforeActive() {
+    try {
+      if (!app.documents.length) return;
+      var doc = app.activeDocument;
+      if (beforeMap[doc.id]) return;
+      beforeMap[doc.id] = await snapDoc(doc, 720);
+    } catch (e) {}
+  }
+
+  function snapshotAfterActive() {
+    setTimeout(function () {
+      refreshFilm(true);
+    }, 200);
+  }
+
+  function setStageHint(on) {
+    var hint = document.getElementById("stageHint");
+    if (!hint) return;
+    if (on) hint.classList.remove("hide");
+    else hint.classList.add("hide");
+  }
+
+  async function showViewer(doc) {
+    if (!doc) {
+      setStageHint(true);
+      document.getElementById("viewName").textContent = "";
+      return;
+    }
+    document.getElementById("viewName").textContent = docLabel(doc);
+    var after = afterMap[doc.id] || thumbMap[doc.id] || await snapDoc(doc, 720);
+    if (after) {
+      afterMap[doc.id] = after;
+      thumbMap[doc.id] = after;
+    }
+    if (!beforeMap[doc.id] && after) beforeMap[doc.id] = after;
+    var afterEl = document.getElementById("viewAfter");
+    var beforeEl = document.getElementById("viewBefore");
+    if (afterEl) afterEl.src = after || "";
+    if (beforeEl) beforeEl.src = beforeMap[doc.id] || after || "";
+    setStageHint(!after);
+    applySplit(comparePct);
+  }
+
+  async function refreshFilm(forceAfter) {
+    if (filmBusy) return;
+    filmBusy = true;
+    try {
+      var strip = document.getElementById("filmStrip");
+      var countEl = document.getElementById("filmCount");
+      if (!strip) return;
+      var docs = [];
+      try { docs = listDocs(); } catch (e) { docs = []; }
+      if (countEl) countEl.textContent = String(docs.length);
+      if (!docs.length) {
+        strip.innerHTML = '<div class="film-empty">Abra fotos no Photoshop — elas aparecem aqui</div>';
+        setStageHint(true);
+        return;
+      }
+      var activeId = null;
+      try { activeId = app.activeDocument.id; } catch (e) {}
+      strip.innerHTML = "";
+      for (var i = 0; i < docs.length && i < 24; i++) {
+        (function (doc) {
+          var card = document.createElement("div");
+          card.className = "film-card" + (doc.id === activeId ? " active" : "");
+          var img = thumbMap[doc.id];
+          if (img) {
+            var el = document.createElement("img");
+            el.src = img;
+            card.appendChild(el);
+          } else {
+            var ph = document.createElement("div");
+            ph.className = "film-ph";
+            ph.textContent = "foto";
+            card.appendChild(ph);
+          }
+          var nm = document.createElement("span");
+          nm.className = "film-name";
+          nm.textContent = docLabel(doc);
+          card.appendChild(nm);
+          card.addEventListener("click", function () {
+            activateDoc(doc).then(function () { return showViewer(doc); }).then(function () { refreshFilm(); });
+          });
+          strip.appendChild(card);
+        })(docs[i]);
+      }
+      var active = null;
+      try { active = app.activeDocument; } catch (e) {}
+      if (active) {
+        if (forceAfter || !afterMap[active.id]) {
+          var shot = await snapDoc(active, 720);
+          if (shot) {
+            afterMap[active.id] = shot;
+            thumbMap[active.id] = shot;
+          }
+        }
+        if (!beforeMap[active.id] && afterMap[active.id]) beforeMap[active.id] = afterMap[active.id];
+        await showViewer(active);
+      }
+      for (var n = 0; n < docs.length && n < 12; n++) {
+        var d = docs[n];
+        if (thumbMap[d.id]) continue;
+        var t = await snapDoc(d, 160);
+        if (t) thumbMap[d.id] = t;
+      }
+      var cards = strip.querySelectorAll(".film-card");
+      for (var c = 0; c < cards.length && c < docs.length; c++) {
+        var cached = thumbMap[docs[c].id];
+        if (!cached) continue;
+        var existing = cards[c].querySelector("img");
+        if (existing) existing.src = cached;
+        else {
+          var im = document.createElement("img");
+          im.src = cached;
+          var placeholder = cards[c].querySelector(".film-ph");
+          if (placeholder) cards[c].replaceChild(im, placeholder);
+        }
+      }
+    } catch (e) {
+    } finally {
+      filmBusy = false;
+    }
+  }
+
+  function bindViewer() {
+    var range = document.getElementById("compare");
+    if (range) range.addEventListener("input", function (e) { applySplit(e.target.value); });
+    var stage = document.getElementById("stage");
+    if (stage) {
+      var drag = false;
+      function pos(ev) {
+        var r = stage.getBoundingClientRect();
+        var x = (ev.clientX != null ? ev.clientX : 0) - r.left;
+        applySplit((x / Math.max(1, r.width)) * 100);
+      }
+      stage.addEventListener("pointerdown", function (ev) { drag = true; try { stage.setPointerCapture(ev.pointerId); } catch (e) {} pos(ev); });
+      stage.addEventListener("pointermove", function (ev) { if (drag) pos(ev); });
+      stage.addEventListener("pointerup", function () { drag = false; });
+    }
+    var cap = document.getElementById("captureBefore");
+    if (cap) cap.addEventListener("click", async function () {
+      try {
+        if (!app.documents.length) return;
+        var doc = app.activeDocument;
+        var shot = await snapDoc(doc, 720);
+        if (shot) {
+          beforeMap[doc.id] = shot;
+          await showViewer(doc);
+          setStatus("Antes capturado · " + docLabel(doc));
+        }
+      } catch (e) {}
+    });
+    var ref = document.getElementById("refreshFilm");
+    if (ref) ref.addEventListener("click", function () { refreshFilm(true); });
+    try {
+      action.addNotificationListener(["open", "close", "select"], function () {
+        setTimeout(function () { refreshFilm(); }, 300);
+      });
+    } catch (e) {}
+    applySplit(50);
   }
 
   function bind() {
@@ -1861,6 +2071,8 @@
     document.getElementById("applyProfile").addEventListener("click", function () { runLook(); });
     document.getElementById("runBatch").addEventListener("click", function () { runLote(); });
     applyClass(state.profile);
+    bindViewer();
+    refreshFilm();
   }
 
   try { bind(); } catch (err) { setStatus("Falha ao ligar UI: " + err.message, true); }
