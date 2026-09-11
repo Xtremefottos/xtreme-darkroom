@@ -1847,54 +1847,36 @@
     if (range && Number(range.value) !== comparePct) range.value = String(comparePct);
   }
 
-  async function runRead(fn) {
-    try {
-      if (typeof core.isModal === "function" && core.isModal()) return await fn();
-    } catch (e) {}
-    return await core.executeAsModal(fn, { commandName: "Xtreme · Preview" });
+  async function snapPixels(doc, size) {
+    if (!imaging || !doc) return null;
+    var pix = await imaging.getPixels({
+      documentID: doc.id,
+      componentSize: 8,
+      applyAlpha: true,
+      colorProfile: "sRGB IEC61966-2.1",
+      targetSize: { height: size || 200 }
+    });
+    var data = pix && pix.imageData;
+    if (!data) return null;
+    var encoded = await imaging.encodeImageData({ imageData: data, base64: true });
+    try { data.dispose(); } catch (e) {}
+    return encoded;
   }
 
-  function toDataUrl(encoded) {
-    if (!encoded) return null;
-    if (typeof encoded === "string") {
-      if (encoded.indexOf("data:") === 0) return encoded;
-      return "data:image/jpeg;base64," + encoded;
-    }
-    if (encoded.base64) return "data:image/jpeg;base64," + encoded.base64;
-    try {
-      var u8 = encoded instanceof Uint8Array ? encoded : new Uint8Array(encoded);
-      if (!u8.length) return null;
-      var s = "";
-      var step = 0x8000;
-      for (var i = 0; i < u8.length; i += step) {
-        s += String.fromCharCode.apply(null, u8.subarray(i, i + step));
-      }
-      return "data:image/jpeg;base64," + btoa(s);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function snapDoc(doc, size) {
+  async function snapDoc(doc, size, allowModal) {
     if (!doc) return null;
     try {
-      var jpeg = await runRead(async function () {
-        if (!imaging) return null;
-        var pix = await imaging.getPixels({
-          documentID: doc.id,
-          componentSize: 8,
-          applyAlpha: true,
-          colorProfile: "sRGB IEC61966-2.1",
-          targetSize: { height: size || 280 }
-        });
-        var data = pix && pix.imageData;
-        if (!data) return null;
-        var encoded = await imaging.encodeImageData({ imageData: data, base64: true });
-        try { data.dispose(); } catch (e) {}
-        return encoded;
-      });
-      return toDataUrl(jpeg);
-    } catch (e) {
+      var encoded = await snapPixels(doc, size);
+      var url = toDataUrl(encoded);
+      if (url) return url;
+    } catch (e) {}
+    if (!allowModal) return null;
+    try {
+      var encoded2 = await core.executeAsModal(async function () {
+        return await snapPixels(doc, size);
+      }, { commandName: "Xtreme · Preview", interactive: true });
+      return toDataUrl(encoded2);
+    } catch (e2) {
       return null;
     }
   }
@@ -1904,14 +1886,15 @@
       if (!app.documents.length) return;
       var doc = app.activeDocument;
       if (beforeMap[doc.id]) return;
-      beforeMap[doc.id] = await snapDoc(doc, 320);
+      beforeMap[doc.id] = await snapDoc(doc, 200, false);
     } catch (e) {}
   }
 
   function snapshotAfterActive() {
     setTimeout(function () {
-      refreshFilm(true);
-    }, 200);
+      paintFilm();
+      fillThumbs(true);
+    }, 400);
   }
 
   function setStageHint(on) {
@@ -1921,112 +1904,108 @@
     else hint.classList.add("hide");
   }
 
-  async function showViewer(doc) {
+  function showCachedViewer(doc) {
+    var nameEl = document.getElementById("viewName");
     if (!doc) {
       setStageHint(true);
-      document.getElementById("viewName").textContent = "";
+      if (nameEl) nameEl.textContent = "";
       return;
     }
-    document.getElementById("viewName").textContent = docLabel(doc);
-    var after = afterMap[doc.id] || thumbMap[doc.id] || await snapDoc(doc, 320);
-    if (after) {
-      afterMap[doc.id] = after;
-      thumbMap[doc.id] = after;
-    }
-    if (!beforeMap[doc.id] && after) beforeMap[doc.id] = after;
+    if (nameEl) nameEl.textContent = docLabel(doc);
+    var after = afterMap[doc.id] || thumbMap[doc.id];
+    var before = beforeMap[doc.id] || after;
     var afterEl = document.getElementById("viewAfter");
     var beforeEl = document.getElementById("viewBefore");
     if (afterEl) afterEl.src = after || "";
-    if (beforeEl) beforeEl.src = beforeMap[doc.id] || after || "";
+    if (beforeEl) beforeEl.src = before || "";
     setStageHint(!after);
     applySplit(comparePct);
   }
 
-  async function refreshFilm(forceAfter) {
+  function paintFilm() {
+    var strip = document.getElementById("filmStrip");
+    if (!strip) return [];
+    var docs = [];
+    try { docs = listDocs(); } catch (e) { docs = []; }
+    if (!docs.length) {
+      strip.innerHTML = '<div class="film-empty">Abra fotos no Photoshop — elas aparecem aqui</div>';
+      setStageHint(true);
+      return [];
+    }
+    var activeId = null;
+    try { activeId = app.activeDocument.id; } catch (e) {}
+    strip.innerHTML = "";
+    for (var i = 0; i < docs.length && i < 40; i++) {
+      (function (doc) {
+        var card = document.createElement("div");
+        card.className = "film-card" + (doc.id === activeId ? " active" : "");
+        if (thumbMap[doc.id]) {
+          var el = document.createElement("img");
+          el.src = thumbMap[doc.id];
+          card.appendChild(el);
+        } else {
+          var ph = document.createElement("div");
+          ph.className = "film-ph";
+          ph.textContent = "foto";
+          card.appendChild(ph);
+        }
+        var nm = document.createElement("span");
+        nm.className = "film-name";
+        nm.textContent = docLabel(doc);
+        card.appendChild(nm);
+        card.addEventListener("click", function () {
+          activateDoc(doc).then(function () {
+            paintFilm();
+            showCachedViewer(doc);
+            fillThumbs(false);
+          });
+        });
+        strip.appendChild(card);
+      })(docs[i]);
+    }
+    try { showCachedViewer(app.activeDocument); } catch (e) {}
+    return docs;
+  }
+
+  async function fillThumbs(forceAfter, allowModal) {
     if (filmBusy) {
       filmQueued = true;
       return;
     }
     filmBusy = true;
     try {
-      var strip = document.getElementById("filmStrip");
-      if (!strip) return;
-      var docs = [];
-      try { docs = listDocs(); } catch (e) { docs = []; }
-      if (!docs.length) {
-        strip.innerHTML = '<div class="film-empty">Abra fotos no Photoshop — elas aparecem aqui</div>';
-        setStageHint(true);
-        return;
-      }
-      var activeId = null;
-      try { activeId = app.activeDocument.id; } catch (e) {}
-      strip.innerHTML = "";
-      for (var i = 0; i < docs.length && i < 24; i++) {
-        (function (doc) {
-          var card = document.createElement("div");
-          card.className = "film-card" + (doc.id === activeId ? " active" : "");
-          var img = thumbMap[doc.id];
-          if (img) {
-            var el = document.createElement("img");
-            el.src = img;
-            card.appendChild(el);
-          } else {
-            var ph = document.createElement("div");
-            ph.className = "film-ph";
-            ph.textContent = "foto";
-            card.appendChild(ph);
-          }
-          var nm = document.createElement("span");
-          nm.className = "film-name";
-          nm.textContent = docLabel(doc);
-          card.appendChild(nm);
-          card.addEventListener("click", function () {
-            activateDoc(doc).then(function () { return showViewer(doc); }).then(function () { refreshFilm(); });
-          });
-          strip.appendChild(card);
-        })(docs[i]);
-      }
+      var docs = paintFilm();
       var active = null;
       try { active = app.activeDocument; } catch (e) {}
-      if (active) {
-        if (forceAfter || !afterMap[active.id]) {
-          var shot = await snapDoc(active, 320);
-          if (shot) {
-            afterMap[active.id] = shot;
-            thumbMap[active.id] = shot;
-          }
+      if (active && (forceAfter || !afterMap[active.id])) {
+        var shot = await snapDoc(active, 240, !!allowModal);
+        if (shot) {
+          afterMap[active.id] = shot;
+          thumbMap[active.id] = shot;
+          if (!beforeMap[active.id]) beforeMap[active.id] = shot;
+          showCachedViewer(active);
         }
-        if (!beforeMap[active.id] && afterMap[active.id]) beforeMap[active.id] = afterMap[active.id];
-        await showViewer(active);
       }
-      for (var n = 0; n < docs.length && n < 30; n++) {
+      for (var n = 0; n < docs.length; n++) {
         var d = docs[n];
         if (thumbMap[d.id]) continue;
-        var t = await snapDoc(d, 120);
+        var t = await snapDoc(d, 96, !!allowModal);
         if (t) thumbMap[d.id] = t;
       }
-      var cards = strip.querySelectorAll(".film-card");
-      for (var c = 0; c < cards.length && c < docs.length; c++) {
-        var cached = thumbMap[docs[c].id];
-        if (!cached) continue;
-        var existing = cards[c].querySelector("img");
-        if (existing) existing.src = cached;
-        else {
-          var im = document.createElement("img");
-          im.src = cached;
-          var placeholder = cards[c].querySelector(".film-ph");
-          if (placeholder) cards[c].replaceChild(im, placeholder);
-        }
-      }
+      paintFilm();
     } catch (e) {
-      setStatus("Preview: " + (e.message || String(e)), true);
     } finally {
       filmBusy = false;
       if (filmQueued) {
         filmQueued = false;
-        refreshFilm(forceAfter);
+        fillThumbs(false, allowModal);
       }
     }
+  }
+
+  function refreshFilm(forceAfter) {
+    paintFilm();
+    fillThumbs(forceAfter, false);
   }
 
   function bindViewer() {
@@ -2049,22 +2028,46 @@
       try {
         if (!app.documents.length) return;
         var doc = app.activeDocument;
-        var shot = await snapDoc(doc, 720);
+        var shot = await snapDoc(doc, 240, true);
         if (shot) {
           beforeMap[doc.id] = shot;
-          await showViewer(doc);
+          showCachedViewer(doc);
           setStatus("Antes capturado · " + docLabel(doc));
-        }
+        } else setStatus("Não deu para capturar o antes", true);
       } catch (e) {}
     });
     var ref = document.getElementById("refreshFilm");
-    if (ref) ref.addEventListener("click", function () { refreshFilm(true); });
+    if (ref) ref.addEventListener("click", function () {
+      paintFilm();
+      fillThumbs(true, true);
+    });
     try {
-      action.addNotificationListener(["open", "close", "select"], function () {
-        setTimeout(function () { refreshFilm(); }, 300);
+      action.addNotificationListener(["open", "close"], function () {
+        setTimeout(function () { paintFilm(); }, 200);
       });
     } catch (e) {}
     applySplit(50);
+  }
+
+  function toDataUrl(encoded) {
+    if (!encoded) return null;
+    if (typeof encoded === "string") {
+      if (encoded.indexOf("data:") === 0) return encoded;
+      return "data:image/jpeg;base64," + encoded;
+    }
+    if (encoded.base64) return "data:image/jpeg;base64," + encoded.base64;
+    try {
+      var u8 = encoded instanceof Uint8Array ? encoded : new Uint8Array(encoded);
+      if (!u8.length) return null;
+      var s = "";
+      var step = 0x8000;
+      for (var i = 0; i < u8.length; i += step) {
+        s += String.fromCharCode.apply(null, u8.subarray(i, i + step));
+      }
+      return "data:image/jpeg;base64," + btoa(s);
+    } catch (e) {
+      return null;
+    }
   }
 
   function bind() {
@@ -2135,7 +2138,8 @@
     document.getElementById("runBatch").addEventListener("click", function () { runLote(); });
     applyClass(state.profile);
     bindViewer();
-    refreshFilm();
+    paintFilm();
+    setTimeout(function () { fillThumbs(false, false); }, 1500);
   }
 
   try { bind(); } catch (err) { setStatus("Falha ao ligar UI: " + err.message, true); }
